@@ -1361,3 +1361,18 @@ function openRush() {
   showHub("Home");
   setTimeout(checkLogin, 500);
 })();
+
+// ---------------------------------------------------------------- full-height safety net (iPhone home-screen app)
+// some iOS versions report a page height shorter than the screen in standalone mode, leaving a gap at the bottom.
+function fixViewport() {
+  const standalone = navigator.standalone === true || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
+  const portrait = window.matchMedia && matchMedia("(orientation: portrait)").matches;
+  const full = Math.max(screen.height || 0, screen.width || 0);
+  const short = standalone && portrait && full && window.innerHeight < full - 2;
+  document.body.style.bottom = short ? "auto" : "";
+  document.body.style.height = short ? full + "px" : "";
+}
+["resize", "orientationchange", "pageshow", "focus"].forEach((ev) => window.addEventListener(ev, () => setTimeout(fixViewport, 50)));
+if (window.visualViewport) visualViewport.addEventListener("resize", () => setTimeout(fixViewport, 50));
+fixViewport();
+setTimeout(fixViewport, 400);
