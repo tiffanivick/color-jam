@@ -1,0 +1,4 @@
+__pycache__/
+*.log
+aug_*.json
+.DS_Store
