@@ -1398,7 +1398,7 @@ setTimeout(fixViewport, 400);
   });
   const tag = document.getElementById("buildTag");
   if (tag) {
-    tag.textContent = "build " + ((document.querySelector('script[src*="src/app.js"]').src.match(/v=(\d+)/) || [])[1] || "?");
+    tag.textContent = "build " + (location.pathname.includes("/t1/") ? "A-" : location.pathname.includes("/t2/") ? "B-" : "") + ((document.querySelector('script[src*="src/app.js"]').src.match(/v=(\d+)/) || [])[1] || "?");
     tag.addEventListener("click", () => show());
   }
   function show() {
