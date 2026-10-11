@@ -317,7 +317,22 @@ function renderHome() {
     b.textContent = ready;
   });
   renderTop();
+  fitHome();
 }
+// shrink the brick picture until the whole home screen fits without scrolling
+function fitHome() {
+  const pane = $("paneHome"), m = $("homeMosaic");
+  if (!pane || !m || pane.hidden || !pane.offsetParent) return;
+  let dot = 18;
+  m.style.setProperty("--dot", dot + "px");
+  while (dot > 6 && pane.scrollHeight > pane.clientHeight + 1) {
+    dot -= 1;
+    m.style.setProperty("--dot", dot + "px");
+  }
+}
+window.addEventListener("resize", fitHome);
+window.addEventListener("orientationchange", () => setTimeout(fitHome, 250));
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitHome);
 $("playBtn").addEventListener("click", () => {
   if (!allDone()) startLevel();
 });
