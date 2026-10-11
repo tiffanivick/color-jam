@@ -1380,14 +1380,24 @@ setTimeout(fixViewport, 400);
 
 // ---------------------------------------------------------------- hidden diagnostics: tap the Color Jam title 5 times
 (function diagnostics() {
-  let taps = 0, timer = 0;
+  let taps = 0, timer = 0, hold = 0;
+  document.addEventListener("pointerdown", (e) => {
+    if (!e.target.closest(".wordmark-big")) return;
+    clearTimeout(hold);
+    hold = setTimeout(show, 1500);
+  });
+  ["pointerup", "pointercancel", "pointerleave"].forEach((ev) => document.addEventListener(ev, () => clearTimeout(hold)));
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".wordmark-big")) return;
     taps++;
     clearTimeout(timer);
     timer = setTimeout(() => (taps = 0), 1500);
-    if (taps < 5) return;
+    if (taps < 3) return;
     taps = 0;
+    show();
+  });
+  function show() {
+    clearTimeout(hold);
     const probe = document.createElement("div");
     probe.style.cssText = "position:fixed;left:0;top:0;visibility:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)";
     document.body.appendChild(probe);
@@ -1416,5 +1426,5 @@ setTimeout(fixViewport, 400);
       { cls: "dismissable" },
     );
     $("diagClose").addEventListener("click", () => closeSheet());
-  });
+  }
 })();
