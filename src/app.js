@@ -126,7 +126,8 @@ const POWER_TEXT = {
 function setTheme(w) {
   document.body.dataset.world = WORLDS[w].id;
   // if the phone ever leaves a gap below the page, show the theme colour instead of white
-  document.documentElement.style.backgroundColor = getComputedStyle(document.body).getPropertyValue("--bg2").trim();
+  const bg2 = getComputedStyle(document.body).getPropertyValue("--bg2").trim();
+  document.documentElement.style.background = "linear-gradient(rgba(8,4,36,0.35), rgba(8,4,36,0.35)), " + bg2;
   const deco = $("deco");
   if (deco.dataset.w === WORLDS[w].id) return;
   deco.dataset.w = WORLDS[w].id;
@@ -1362,15 +1363,15 @@ function openRush() {
   setTimeout(checkLogin, 500);
 })();
 
-// ---------------------------------------------------------------- full-height safety net (iPhone home-screen app)
-// some iOS versions report a page height shorter than the screen in standalone mode, leaving a gap at the bottom.
+// ---------------------------------------------------------------- iPhone home-screen app: short page area
+// some iOS versions give the page less height than the screen in standalone mode. the strip below is painted with the
+// theme colour (see setTheme) and the tab bar drops its extra bottom padding so it sits near the bottom edge.
 function fixViewport() {
   const standalone = navigator.standalone === true || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
   const portrait = window.matchMedia && matchMedia("(orientation: portrait)").matches;
   const full = Math.max(screen.height || 0, screen.width || 0);
-  const short = standalone && portrait && full && window.innerHeight < full - 2;
-  document.body.style.bottom = short ? "auto" : "";
-  document.body.style.height = short ? full + "px" : "";
+  const short = !!(standalone && portrait && full && window.innerHeight < full - 2);
+  document.documentElement.classList.toggle("vp-short", short);
 }
 ["resize", "orientationchange", "pageshow", "focus"].forEach((ev) => window.addEventListener(ev, () => setTimeout(fixViewport, 50)));
 if (window.visualViewport) visualViewport.addEventListener("resize", () => setTimeout(fixViewport, 50));
