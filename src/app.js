@@ -1377,3 +1377,44 @@ function fixViewport() {
 if (window.visualViewport) visualViewport.addEventListener("resize", () => setTimeout(fixViewport, 50));
 fixViewport();
 setTimeout(fixViewport, 400);
+
+// ---------------------------------------------------------------- hidden diagnostics: tap the Color Jam title 5 times
+(function diagnostics() {
+  let taps = 0, timer = 0;
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".wordmark-big")) return;
+    taps++;
+    clearTimeout(timer);
+    timer = setTimeout(() => (taps = 0), 1500);
+    if (taps < 5) return;
+    taps = 0;
+    const probe = document.createElement("div");
+    probe.style.cssText = "position:fixed;left:0;top:0;visibility:hidden;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)";
+    document.body.appendChild(probe);
+    const cs = getComputedStyle(probe);
+    const mq = (q) => (window.matchMedia && matchMedia(q).matches ? "yes" : "no");
+    const vv = window.visualViewport;
+    const rows = [
+      ["build", (document.querySelector('script[src*="src/app.js"]').src.match(/v=(\d+)/) || [])[1]],
+      ["standalone", String(navigator.standalone) + " / display-mode " + mq("(display-mode: standalone)")],
+      ["innerHeight", innerHeight],
+      ["outerHeight", outerHeight],
+      ["screen w x h", screen.width + " x " + screen.height],
+      ["visualViewport", vv ? Math.round(vv.width) + " x " + Math.round(vv.height) : "n/a"],
+      ["html clientHeight", document.documentElement.clientHeight],
+      ["body height", Math.round(document.body.getBoundingClientRect().height)],
+      ["tabbar bottom", Math.round(document.querySelector(".tabbar").getBoundingClientRect().bottom)],
+      ["safe top/bottom", cs.paddingTop + " / " + cs.paddingBottom],
+      ["vp-short", document.documentElement.classList.contains("vp-short")],
+      ["service worker", navigator.serviceWorker && navigator.serviceWorker.controller ? "active" : "none"],
+    ];
+    probe.remove();
+    openSheet(
+      '<div class="ribbon gold">Diagnostics</div><div class="sheet-body"><div style="font:600 14px/1.7 DM Sans,system-ui;text-align:left">' +
+        rows.map((r) => "<div><b>" + r[0] + ":</b> " + r[1] + "</div>").join("") +
+        '</div><button class="btn-big blue" id="diagClose" style="margin-top:14px">Close</button></div>',
+      { cls: "dismissable" },
+    );
+    $("diagClose").addEventListener("click", () => closeSheet());
+  });
+})();
