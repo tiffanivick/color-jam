@@ -12,7 +12,7 @@
     <title>Color Jam</title>
     <link rel="preload" href="fonts/BagelFatOne-Regular.ttf" as="font" type="font/ttf" crossorigin />
     <link rel="preload" href="fonts/DMSans.ttf" as="font" type="font/ttf" crossorigin />
-    <link rel="stylesheet" href="style.css?v=8" />
+    <link rel="stylesheet" href="style.css?v=9" />
   </head>
   <body data-world="meadow">
     <div id="bg" aria-hidden="true"><div class="hills"></div><div class="deco" id="deco"></div></div>
@@ -118,28 +118,12 @@
     <div class="overlay hidden" id="modal"><div class="sheet" id="sheet"></div></div>
     <div class="toasts" id="toasts" aria-live="polite"></div>
 
-    <script src="src/sound.js?v=8"></script>
-    <script src="src/worlds.js?v=8"></script>
-    <script src="src/engine.js?v=8"></script>
-    <script src="src/app.js?v=8"></script>
+    <script src="src/sound.js?v=9"></script>
+    <script src="src/worlds.js?v=9"></script>
+    <script src="src/engine.js?v=9"></script>
+    <script src="src/app.js?v=9"></script>
   <script>
       if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
-    </script>
-  <script>
-      // auto-update: if a newer build is on the server, reload once to pick it up
-      if (location.protocol === "https:") {
-        fetch("index.html?_=" + Date.now(), { cache: "no-store" })
-          .then((r) => r.text())
-          .then((t) => {
-            const m = t.match(/src\/app\.js\?v=(\d+)/);
-            const cur = (document.querySelector('script[src*="src/app.js"]').src.match(/v=(\d+)/) || [])[1];
-            if (m && cur && m[1] !== cur) {
-              const k = "cj-reload-" + m[1];
-              if (!sessionStorage.getItem(k)) { sessionStorage.setItem(k, "1"); location.reload(); }
-            }
-          })
-          .catch(() => {});
-      }
     </script>
   </body>
 </html>

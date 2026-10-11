@@ -73,10 +73,10 @@ body[data-world="star"] {
 
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
-html, body { height: 100%; }
+html { height: 100%; }
 body {
   margin: 0;
-  position: fixed; inset: 0; overflow: hidden;
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0; overflow: hidden;
   color: var(--ink);
   font-family: "DM Sans", system-ui, sans-serif;
   background: linear-gradient(180deg, var(--bg1), var(--bg2));

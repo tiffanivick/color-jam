@@ -125,6 +125,8 @@ const POWER_TEXT = {
 // ---------------------------------------------------------------- theme + background
 function setTheme(w) {
   document.body.dataset.world = WORLDS[w].id;
+  // if the phone ever leaves a gap below the page, show the theme colour instead of white
+  document.documentElement.style.backgroundColor = getComputedStyle(document.body).getPropertyValue("--bg2").trim();
   const deco = $("deco");
   if (deco.dataset.w === WORLDS[w].id) return;
   deco.dataset.w = WORLDS[w].id;
