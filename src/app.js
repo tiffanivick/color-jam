@@ -126,8 +126,8 @@ const POWER_TEXT = {
 function setTheme(w) {
   document.body.dataset.world = WORLDS[w].id;
   // if the phone ever leaves a gap below the page, show the theme colour instead of white
-  const bg2 = getComputedStyle(document.body).getPropertyValue("--bg2").trim();
-  document.documentElement.style.background = "linear-gradient(rgba(8,4,36,0.35), rgba(8,4,36,0.35)), " + bg2;
+  const nav = document.querySelector(".tabbar");
+  if (nav) document.documentElement.style.background = getComputedStyle(nav).backgroundColor;
   const deco = $("deco");
   if (deco.dataset.w === WORLDS[w].id) return;
   deco.dataset.w = WORLDS[w].id;
