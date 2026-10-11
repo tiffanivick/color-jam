@@ -1396,6 +1396,11 @@ setTimeout(fixViewport, 400);
     taps = 0;
     show();
   });
+  const tag = document.getElementById("buildTag");
+  if (tag) {
+    tag.textContent = "build " + ((document.querySelector('script[src*="src/app.js"]').src.match(/v=(\d+)/) || [])[1] || "?");
+    tag.addEventListener("click", () => show());
+  }
   function show() {
     clearTimeout(hold);
     const probe = document.createElement("div");

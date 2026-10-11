@@ -12,13 +12,14 @@
     <title>Color Jam</title>
     <link rel="preload" href="fonts/BagelFatOne-Regular.ttf" as="font" type="font/ttf" crossorigin />
     <link rel="preload" href="fonts/DMSans.ttf" as="font" type="font/ttf" crossorigin />
-    <link rel="stylesheet" href="style.css?v=13" />
+    <link rel="stylesheet" href="style.css?v=14" />
   </head>
   <body data-world="meadow">
     <div id="bg" aria-hidden="true"><div class="hills"></div><div class="deco" id="deco"></div></div>
 
     <!-- ===================== HUB (home / map / quests / shop / trophies) ===================== -->
     <div id="hub" class="screen">
+      <button class="build-tag" id="buildTag" aria-label="Build info"></button>
       <header class="topbar">
         <div class="pill" title="Coins"><i class="coin"></i><b id="coinCount">0</b></div>
         <div class="pill" title="Stars"><svg class="mini-star" viewBox="0 0 24 24"><path d="M12 2.2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.4 5.9 20.8l1.4-6.8L2.2 9.3l6.9-.8L12 2.2Z"/></svg><b id="starCount">0</b></div>
@@ -118,10 +119,10 @@
     <div class="overlay hidden" id="modal"><div class="sheet" id="sheet"></div></div>
     <div class="toasts" id="toasts" aria-live="polite"></div>
 
-    <script src="src/sound.js?v=13"></script>
-    <script src="src/worlds.js?v=13"></script>
-    <script src="src/engine.js?v=13"></script>
-    <script src="src/app.js?v=13"></script>
+    <script src="src/sound.js?v=14"></script>
+    <script src="src/worlds.js?v=14"></script>
+    <script src="src/engine.js?v=14"></script>
+    <script src="src/app.js?v=14"></script>
   <script>
       if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
     </script>
