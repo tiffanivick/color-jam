@@ -157,5 +157,93 @@ const WORLDS = [
    ".......o.......",
    "..y..........y."
   ]
+ },
+ {
+  "id": "reef",
+  "name": "Coral Reef",
+  "tagline": "Bigger boards, more blocks to juggle",
+  "picture": "a happy whale",
+  "pal": {
+   "B": "#3f8cff",
+   "b": "#7fb8ff",
+   "W": "#f4fbff",
+   "E": "#14213d",
+   "S": "#bfe9ff",
+   "w": "#2aa7c9",
+   "d": "#1f7fa8"
+  },
+  "art": [
+   "......S..S......",
+   ".......SS.......",
+   "...BBBBBBB....B.",
+   "..BBBBBBBBB..BB.",
+   ".BBBBBBBBBBBBBB.",
+   ".BEBBBBBBBBBBB..",
+   ".BBBBBBBBBBBB...",
+   ".WWWWWWWWWBB....",
+   "..WWWWWWWWB.....",
+   "wwwwwwwwwwwwwwww",
+   "dddddddddddddddd",
+   "dddddddddddddddd"
+  ]
+ },
+ {
+  "id": "dunes",
+  "name": "Golden Dunes",
+  "tagline": "Chains and bombs heat things up",
+  "picture": "a golden pyramid",
+  "pal": {
+   "Y": "#ffd447",
+   "P": "#e9b872",
+   "p": "#c98a45",
+   "S": "#f2d38a",
+   "s": "#e0b86a",
+   "G": "#33a85a",
+   "k": "#5c3b1e"
+  },
+  "art": [
+   "..........YYY...",
+   ".........YYYYY..",
+   "..........YYY...",
+   ".......P........",
+   "......PPP...G...",
+   ".....PPpPP..G.G.",
+   "....PPPpPPP.GGG.",
+   "...PPPPpPPPP.G..",
+   "..PPPPPkkPPPPG..",
+   ".PPPPPPkkPPPP...",
+   "SSSSSSSSSSSSSSSS",
+   "ssssssssssssssss"
+  ]
+ },
+ {
+  "id": "dusk",
+  "name": "Sunset Skies",
+  "tagline": "The big finale: every trick at once",
+  "picture": "a hot-air balloon",
+  "pal": {
+   "R": "#e8434f",
+   "Y": "#ffd447",
+   "W": "#ffffff",
+   "b": "#8a5a35",
+   "r": "#d9c7a0",
+   "c": "#f1e6ff",
+   "C": "#d9c4f5"
+  },
+  "art": [
+   "......RRRR......",
+   "....RRYYYYRR....",
+   "...RRYYWWYYRR...",
+   "..RRYYYWWYYYRR..",
+   "..RRYYYWWYYYRR..",
+   "..RRYYYWWYYYRR..",
+   "...RRYYWWYYRR...",
+   "....RRYWWYRR....",
+   ".....RRWWRR.....",
+   "......r..r......",
+   ".......bb.......",
+   "cc..cccbbccc..cc",
+   "CCCCCCCCCCCCCCCC"
+  ]
  }
 ];
