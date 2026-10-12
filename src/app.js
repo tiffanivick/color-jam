@@ -737,6 +737,8 @@ function loadLevel(idx) {
   buildBoard();
   blocks = L.blocks;
   exits = L.exits;
+  boardWalls = L.walls || [];
+  boardLava = L.lava || [];
   moves = 0;
   drag = null;
   undoStack = [];
@@ -753,6 +755,7 @@ function loadLevel(idx) {
   boardEl.querySelectorAll(".block-group, .exit, .fx").forEach((e) => e.remove());
   blocks.forEach(renderBlock);
   exits.forEach(renderExit);
+  renderBoardFeatures();
   $("levelTitle").textContent = "Level " + (idx + 1);
   $("levelWorld").textContent = WORLDS[L.world].name + " · " + (L.difficulty || "Easy");
   cancelAnimationFrame(tickHandle);
@@ -915,22 +918,45 @@ const TIPS = {
   0: "Drag a block to the gate with the same colour. The clock starts on your first move.",
   2: "Park blocks out of the way to free the ones you need.",
   8: "Bigger pieces need a gate as wide as they are.",
-  9: "Frozen! It thaws after that many other blocks leave.",
-  15: "Arrow blocks only slide along their arrow.",
-  17: "Wooden crate: tap it twice to smash it for a prize.",
-  20: "Gray blocks have no gate. Just shove them out of the way.",
-  30: "Chained! The coloured ring on the padlock shows which block holds the key.",
-  33: "Bomb! The number is how many moves you have before it blows.",
 };
+// the first time each kind of block shows up, explain it (newest kinds first)
+const KIND_TIPS = [
+  ["stump", (L) => (L.walls || []).length, "Tree stumps never move. Slide your blocks around them."],
+  ["jelly", (L) => L.blocks.some((b) => b.jelly), "Jelly blocks are wobbly: they move just one square per drag."],
+  ["lava", (L) => (L.lava || []).length, "Lava! Blocks can slide across it, but they can't stop on it."],
+  ["comet", (L) => L.blocks.some((b) => b.comet), "Comets can't stop. Flick one and it flies until it hits something."],
+  ["bubble", (L) => L.blocks.some((b) => b.bubble), "Bubbles float up one square after every move you make."],
+  ["pillar", (L) => L.blocks.some((b) => b.pillar), "Sand pillars block the way, then crumble after that many moves."],
+  ["rainbow", (L) => L.blocks.some((b) => b.rainbow), "Rainbow blocks can leave through a gate of any colour."],
+  ["ice", (L) => L.blocks.some((b) => b.ice), "Frozen! It thaws after that many other blocks leave.", 9],
+  ["axis", (L) => L.blocks.some((b) => b.axis), "Arrow blocks only slide along their arrow.", 15],
+  ["crate", (L) => L.blocks.some((b) => b.crate), "Wooden crate: tap it twice to smash it for a prize.", 17],
+  ["gray", (L) => L.blocks.some((b) => b.gray), "Gray blocks have no gate. Just shove them out of the way.", 20],
+  ["chain", (L) => L.blocks.some((b) => b.lockBy != null), "Chained! The coloured ring on the padlock shows which block holds the key.", 30],
+  ["bomb", (L) => L.blocks.some((b) => b.bomb), "Bomb! The number is how many moves you have before it blows.", 33],
+];
 let tipTimer = 0;
 function showTip(idx) {
   const tip = $("tip");
   tip.classList.remove("show");
   clearTimeout(tipTimer);
-  if (!TIPS[idx] || S.tips[idx]) return;
-  S.tips[idx] = true;
+  let text = null;
+  if (TIPS[idx] && !S.tips[idx]) {
+    S.tips[idx] = true;
+    text = TIPS[idx];
+  } else {
+    const L = LEVELS[idx];
+    for (const [key, has, msg, oldIdx] of KIND_TIPS) {
+      if (S.tips[key] || (oldIdx != null && S.tips[oldIdx])) continue;
+      if (!has(L)) continue;
+      S.tips[key] = true;
+      text = msg;
+      break;
+    }
+  }
+  if (!text) return;
   save();
-  tip.textContent = TIPS[idx];
+  tip.textContent = text;
   setTimeout(() => tip.classList.add("show"), 400);
   tipTimer = setTimeout(() => tip.classList.remove("show"), 7000);
 }
@@ -1034,10 +1060,18 @@ $("boosterUndo").addEventListener("click", () => {
   const u = undoStack.pop();
   usePower("undo");
   Sfx.whoosh();
-  u.block.cells = u.cells;
-  u.block.el.style.transition = "left 0.18s ease-out, top 0.18s ease-out";
-  u.block.el.style.left = u.left + "px";
-  u.block.el.style.top = u.top + "px";
+  // put every block that is still on the board back where it was
+  blocks.forEach((b, i) => {
+    if (b.removed || !b.el || !u.snap[i]) return;
+    b.cells = u.snap[i];
+    b.el.style.transition = "left 0.18s ease-out, top 0.18s ease-out";
+    b.el.style.left = Math.min(...b.cells.map((c) => c[1])) * STEP + "px";
+    b.el.style.top = Math.min(...b.cells.map((c) => c[0])) * STEP + "px";
+    if (b.pillar && u.pillars[i] != null) {
+      b.pillarLeft = u.pillars[i];
+      if (b.pbadge) b.pbadge.textContent = b.pillarLeft;
+    }
+  });
   moves = Math.max(0, moves - 1);
   // a bomb gets the move back too
   blocks.forEach((b) => {

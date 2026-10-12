@@ -19,6 +19,8 @@ let BOARD_H = 0;
 const boardEl = document.getElementById("board");
 let blocks = [];
 let exits = [];
+let boardWalls = []; // stumps: fixed squares
+let boardLava = []; // lava: slide across, can't stop
 let moves = 0;
 let blastMode = false;
 let undoStack = [];
@@ -51,7 +53,23 @@ function buildBoard() {
 // a block may be locked in a few ways: ice (thaws as other blocks leave),
 // chains (locked until its key block leaves), or it may only slide one way.
 const dirsFor = (b) => (b.axis === "h" ? ["left", "right"] : b.axis === "v" ? ["up", "down"] : ["left", "right", "up", "down"]);
-const isNeeded = (b) => !b.gray && !b.crate; // blocks that must leave for the level to be won
+const isNeeded = (b) => !b.gray && !b.crate && !b.pillar; // blocks that must leave for the level to be won
+// stumps (fixed squares) and lava tiles live on the board itself, not in blocks
+function renderBoardFeatures() {
+  piecesEl.querySelectorAll(".stump").forEach((s) => s.remove());
+  const cellEls = boardEl.querySelectorAll(".cell");
+  cellEls.forEach((c) => c.classList.remove("lava"));
+  boardLava.forEach(([r, c]) => cellEls[r * COLS + c] && cellEls[r * COLS + c].classList.add("lava"));
+  boardWalls.forEach(([r, c]) => {
+    const s = document.createElement("div");
+    s.className = "stump";
+    s.style.left = c * STEP + "px";
+    s.style.top = r * STEP + "px";
+    s.style.width = s.style.height = CELL + "px";
+    s.innerHTML = "<i></i>";
+    piecesEl.appendChild(s);
+  });
+}
 function chained(b) {
   return b.lockBy != null && blocks[b.lockBy] && !blocks[b.lockBy].removed;
 }
@@ -138,7 +156,7 @@ function renderBlock(b) {
     cellEl.style.top = (r - r0) * STEP + "px";
     cellEl.style.width = CELL + (hasRight ? GAP : 0) + "px";
     cellEl.style.height = CELL + (hasDown ? GAP : 0) + "px";
-    cellEl.style.background = b.color;
+    cellEl.style.backgroundColor = b.color;
     // solid lip under the brick (only squares with nothing below them get one)
     cellEl.style.boxShadow = hasDown
       ? "none"
@@ -205,6 +223,21 @@ function renderBlock(b) {
     kb.style.left = (f2[1] - c0) * STEP + CELL / 2 - 14 + "px";
     kb.style.top = (f2[0] - r0) * STEP + CELL / 2 - 14 + "px";
     wrapper.appendChild(kb);
+  }
+  if (b.jelly) wrapper.classList.add("jelly");
+  if (b.comet) wrapper.classList.add("comet");
+  if (b.bubble) wrapper.classList.add("bubble");
+  if (b.rainbow) wrapper.classList.add("rainbow");
+  if (b.pillar) {
+    b.pillarLeft = b.pillar;
+    wrapper.classList.add("pillar");
+    const pb = document.createElement("div");
+    pb.className = "pillar-badge";
+    pb.textContent = b.pillarLeft;
+    pb.style.left = ((c1 - c0 + 1) * STEP - GAP) / 2 - 14 + "px";
+    pb.style.top = ((r1 - r0 + 1) * STEP - GAP) / 2 - 14 + "px";
+    wrapper.appendChild(pb);
+    b.pbadge = pb;
   }
   b.iced = !!b.ice;
   if (b.ice) {
@@ -293,17 +326,62 @@ function shiftCells(cells, dr, dc) {
 // that the block can reach through empty space. A position where the block touches
 // a matching gate is flagged with the direction it exits in. The block goes
 // straight through, so it can't travel on from there.
+const onLava = (cells) => boardLava.length > 0 && cells.some(([r, c]) => boardLava.some(([lr, lc]) => lr === r && lc === c));
+
 function computeReachable(block) {
   const reach = new Map();
   const start = { dr: 0, dc: 0, exitDir: null };
   reach.set(stateKey(0, 0), start);
-  const queue = [start];
+  const dirs = dirsFor(block);
 
+  // comet: only straight lines; it can only come to rest at the end of a line
+  if (block.comet) {
+    const gate0 = dirs.find((dir) => tryStep(block, block.cells, dir).status === "exit");
+    if (gate0) start.exitDir = gate0;
+    for (const dir of dirs) {
+      let s = start;
+      let cells = block.cells;
+      for (;;) {
+        const t = tryStep(block, cells, dir);
+        if (t.status === "exit") {
+          if (s !== start) s.exitDir = dir;
+          break;
+        }
+        if (t.status !== "move") break;
+        const n = { dr: s.dr + DIRS[dir][0], dc: s.dc + DIRS[dir][1], exitDir: null, noStop: true, line: dir };
+        reach.set(stateKey(n.dr, n.dc), n);
+        cells = t.next;
+        s = n;
+      }
+      if (s !== start && !s.exitDir) s.noStop = onLava(shiftCells(block.cells, s.dr, s.dc));
+      if (s !== start) s.lineEnd = true;
+    }
+    return reach;
+  }
+
+  // jelly: one square per drag, and it can only leave from where it already is
+  if (block.jelly) {
+    const gate0 = dirs.find((dir) => tryStep(block, block.cells, dir).status === "exit");
+    if (gate0) {
+      start.exitDir = gate0;
+      return reach;
+    }
+    for (const dir of dirs) {
+      const t = tryStep(block, block.cells, dir);
+      if (t.status !== "move") continue;
+      const n = { dr: DIRS[dir][0], dc: DIRS[dir][1], exitDir: null };
+      n.noStop = onLava(t.next);
+      reach.set(stateKey(n.dr, n.dc), n);
+    }
+    return reach;
+  }
+
+  const queue = [start];
   while (queue.length) {
     const s = queue.shift();
     const cells = shiftCells(block.cells, s.dr, s.dc);
 
-    const gate = dirsFor(block).find(
+    const gate = dirs.find(
       (dir) => tryStep(block, cells, dir).status === "exit",
     );
     if (gate) {
@@ -311,12 +389,13 @@ function computeReachable(block) {
       continue;
     }
 
-    for (const dir of dirsFor(block)) {
+    for (const dir of dirs) {
       const nr = s.dr + DIRS[dir][0];
       const nc = s.dc + DIRS[dir][1];
       if (reach.has(stateKey(nr, nc))) continue;
-      if (tryStep(block, cells, dir).status === "move") {
-        const n = { dr: nr, dc: nc, exitDir: null };
+      const t = tryStep(block, cells, dir);
+      if (t.status === "move") {
+        const n = { dr: nr, dc: nc, exitDir: null, noStop: onLava(t.next) };
         reach.set(stateKey(nr, nc), n);
         queue.push(n);
       }
@@ -435,8 +514,8 @@ function setupDrag(b, el) {
       hitCrate(b);
       return;
     }
-    if (isFrozen(b)) {
-      shake(el); // frozen: can't be moved until enough blocks have left
+    if (isFrozen(b) || b.pillar) {
+      shake(el); // frozen (or a sand pillar): can't be moved
       return;
     }
     hooks.start();
@@ -467,6 +546,26 @@ function setupDrag(b, el) {
 // ---------- bombs and crates ----------
 // every move (a slide that settles, or a block leaving) uses up one tick of each bomb
 function afterMove() {
+  // bubbles float up one square (top-most first); one at a matching top gate pops out
+  blocks
+    .filter((b) => b.bubble && !b.removed)
+    .sort((a, b) => Math.min(...a.cells.map((c) => c[0])) - Math.min(...b.cells.map((c) => c[0])))
+    .forEach((b) => {
+      const t = tryStep(b, b.cells, "up");
+      if (t.status === "exit") {
+        driftExit(b);
+      } else if (t.status === "move") {
+        b.cells = t.next;
+        floatTo(b);
+      }
+    });
+  // sand pillars crumble once enough moves have been made
+  blocks.forEach((b) => {
+    if (!b.pillar || b.removed) return;
+    b.pillarLeft = Math.max(0, b.pillarLeft - 1);
+    if (b.pbadge) b.pbadge.textContent = b.pillarLeft;
+    if (b.pillarLeft <= 0) crumble(b);
+  });
   blocks.forEach((b) => {
     if (!b.bomb || b.removed) return;
     b.bombLeft = Math.max(0, b.bombLeft - 1);
@@ -474,6 +573,51 @@ function afterMove() {
     if (b.el) b.el.classList.toggle("hot", b.bombLeft <= 2);
     if (b.bombLeft <= 0) hooks.boom(b);
   });
+}
+// move a block's picture to where its squares are (after the settle animation)
+function floatTo(b) {
+  const el = b.el;
+  if (!el) return;
+  const r0 = Math.min(...b.cells.map((c) => c[0]));
+  const c0 = Math.min(...b.cells.map((c) => c[1]));
+  setTimeout(() => {
+    if (b.removed || (drag && drag.block === b)) return;
+    el.style.transition = "left 0.3s ease-out, top 0.3s ease-out";
+    el.style.left = c0 * STEP + "px";
+    el.style.top = r0 * STEP + "px";
+  }, 150);
+}
+// a bubble that floats into its own top gate leaves without costing a move
+function driftExit(b) {
+  b.removed = true;
+  const el = b.el;
+  hooks.exit(b);
+  const ex = findExit(b, b.cells.map(([r, c]) => [r - 1, c]), "up");
+  setTimeout(() => {
+    celebrateExit(b, ex);
+    if (!el) return;
+    el.classList.add("gone");
+    el.style.pointerEvents = "none";
+    el.style.transition = "top 0.35s ease-in, opacity 0.35s ease-in";
+    el.style.top = parseFloat(el.style.top) - 2 * STEP + "px";
+    el.style.opacity = "0.2";
+    setTimeout(() => el.remove(), 380);
+  }, 150);
+  refreshIce();
+  setTimeout(() => {
+    updateBoosters();
+    checkWin();
+  }, 0);
+}
+function crumble(b) {
+  b.removed = true;
+  const el = b.el;
+  if (!el) return;
+  el.classList.add("gone", "crumble");
+  el.style.pointerEvents = "none";
+  hooks.crack();
+  setTimeout(() => el.remove(), 600);
+  refreshIce();
 }
 // a crate takes two taps: the first cracks it, the second smashes it
 function hitCrate(b) {
@@ -598,14 +742,27 @@ function endDrag() {
   stopGlide(drag);
   drag = null;
 
-  // settle on the closest square
+  // settle on the closest square it may stop on (never on lava)
   let best = null;
   let bestDist = Infinity;
-  for (const s of reach.values()) {
-    const d = (s.dc - pos[0]) ** 2 + (s.dr - pos[1]) ** 2;
-    if (d < bestDist) {
-      bestDist = d;
-      best = s;
+  if (block.comet) {
+    // a comet keeps going: pushed far enough along a line, it flies to that line's end
+    const ax = Math.abs(pos[0]) >= Math.abs(pos[1]) ? "h" : "v";
+    const amt = ax === "h" ? pos[0] : pos[1];
+    const dir = ax === "h" ? (amt > 0 ? "right" : "left") : amt > 0 ? "down" : "up";
+    best = reach.get(stateKey(0, 0));
+    if (Math.abs(amt) >= 0.3) {
+      for (const s of reach.values()) if (s.line === dir && s.lineEnd) best = s;
+      if (best.noStop && !best.exitDir) best = reach.get(stateKey(0, 0));
+    }
+  } else {
+    for (const s of reach.values()) {
+      if (s.noStop && !s.exitDir) continue;
+      const d = (s.dc - pos[0]) ** 2 + (s.dr - pos[1]) ** 2;
+      if (d < bestDist) {
+        bestDist = d;
+        best = s;
+      }
     }
   }
 
@@ -618,7 +775,7 @@ function endDrag() {
   el.style.left = baseLeft + best.dc * STEP + "px";
   el.style.top = baseTop + best.dr * STEP + "px";
   if (best.dr !== 0 || best.dc !== 0) {
-    undoStack.push({ block, cells: block.cells, left: baseLeft, top: baseTop });
+    undoStack.push({ snap: blocks.map((o) => o.cells), pillars: blocks.map((o) => o.pillarLeft) });
     block.cells = shiftCells(block.cells, best.dr, best.dc);
     moves++;
     updateHUD();
@@ -637,7 +794,7 @@ window.addEventListener("pointercancel", endDrag);
 // fit inside the gate.
 function findExit(movingBlock, next, dir) {
   return exits.find((ex) => {
-    if (ex.color !== movingBlock.color) return false;
+    if (ex.color !== movingBlock.color && !movingBlock.rainbow) return false;
     const span = ex.length || 1;
     const fits = (n) => n >= ex.index && n < ex.index + span;
     if (dir === "right")
@@ -673,6 +830,7 @@ function tryStep(movingBlock, cells, dir) {
       ),
   );
   if (occupied) return { status: "blocked" };
+  if (boardWalls.some(([r, c]) => next.some(([nr, nc]) => nr === r && nc === c))) return { status: "blocked" };
 
   return { status: "move", next };
 }
