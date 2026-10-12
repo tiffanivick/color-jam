@@ -119,6 +119,10 @@ function renderBlock(b) {
   wrapper.style.top = r0 * STEP + "px";
   wrapper.style.width = (c1 - c0 + 1) * CELL + (c1 - c0) * GAP + "px";
   wrapper.style.height = (r1 - r0 + 1) * CELL + (r1 - r0) * GAP + "px";
+  // for the realistic skin: block colour and size, so lighting can run across the whole block
+  wrapper.style.setProperty("--bc", b.color);
+  wrapper.style.setProperty("--gw", wrapper.style.width);
+  wrapper.style.setProperty("--gh", wrapper.style.height);
 
   b.cells.forEach(([r, c]) => {
     const hasRight = cellHasNeighbor(b, r, c, 0, 1);
@@ -127,7 +131,9 @@ function renderBlock(b) {
     const hasUp = cellHasNeighbor(b, r, c, -1, 0);
 
     const cellEl = document.createElement("div");
-    cellEl.className = "block-cell" + (hasDown ? "" : " base");
+    cellEl.className = "block-cell" + (hasDown ? "" : " base") + (hasUp ? "" : " e-t") + (hasLeft ? "" : " e-l") + (hasRight ? "" : " e-r");
+    cellEl.style.setProperty("--ox", (c - c0) * STEP + "px");
+    cellEl.style.setProperty("--oy", (r - r0) * STEP + "px");
     cellEl.style.left = (c - c0) * STEP + "px";
     cellEl.style.top = (r - r0) * STEP + "px";
     cellEl.style.width = CELL + (hasRight ? GAP : 0) + "px";

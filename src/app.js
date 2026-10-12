@@ -19,6 +19,7 @@ const defaults = () => ({
   chests: 0, // chests waiting to be opened
   inv: { undo: 2, hammer: 1, freeze: 2, vacuum: 1 },
   bonus: 1, // Bonus Rush tickets
+  skin: "real", // block look: classic or real
   stats: { levels: 0, perfect: 0, bestCombo: 0, exits: 0, thawed: 0, blasted: 0, worlds: 0, coinsEarned: 0, questsDone: 0, streakBest: 0, crates: 0, defused: 0, rushes: 0, vacuumed: 0 },
   daily: { date: "", progress: {}, claimed: {}, bonus: false },
   login: { last: "", count: 0, claimed: "" },
@@ -60,6 +61,8 @@ if (qs.get("reset")) {
   S = load();
   history.replaceState(null, "", location.pathname);
 }
+if (qs.get("skin")) S.skin = qs.get("skin") === "real" ? "real" : "classic";
+applySkin();
 // ?skip=N fast-forwards N levels (for testing only)
 const SKIP = parseInt(qs.get("skip"), 10);
 
@@ -605,9 +608,25 @@ const powerGlyph = (t) => '<i class="pw pw-' + t + '">' + ICON[t] + "</i>";
 
 // ---------------------------------------------------------------- shop
 const SHOP = ["undo", "hammer", "freeze", "vacuum"].map((id) => ({ id, name: POWER_NAME[id], desc: POWER_TEXT[id], icon: id }));
+function applySkin() {
+  document.body.classList.toggle("skin-real", S.skin === "real");
+}
 function renderShop() {
   const list = $("shopList");
   list.innerHTML = "";
+  // free cosmetic: block style
+  const skinRow = el("div", "row shop skin-row");
+  skinRow.innerHTML = '<div class="skin-swatch"><i></i></div><div class="row-main"><b>Block style</b><small>' + (S.skin === "real" ? "Realistic: glossy molded plastic" : "Classic: bright and flat") + "</small></div>";
+  const sb = el("button", "chip-btn go", S.skin === "real" ? "Classic" : "Realistic");
+  sb.addEventListener("click", () => {
+    S.skin = S.skin === "real" ? "classic" : "real";
+    save();
+    applySkin();
+    Sfx.coin();
+    renderShop();
+  });
+  skinRow.appendChild(sb);
+  list.appendChild(skinRow);
   SHOP.forEach((it) => {
     [1, 3].forEach((qty) => {
       const price = qty === 1 ? COST[it.id] : Math.round(COST[it.id] * 3 * 0.8);
