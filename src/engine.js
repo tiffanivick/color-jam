@@ -144,24 +144,18 @@ function renderBlock(b) {
     wrapper.appendChild(cellEl);
   });
 
-  // concave (inner) corners get a small rounded fillet to match the outer corners
-  const FR = 8;
-  const has = (r, c) => b.cells.some(([rr, cc]) => rr === r && cc === c);
+  // inside bend of an L: carry the dark underside edge across the gap so it meets the other arm cleanly
+  const hasCell = (r, c) => b.cells.some(([rr, cc]) => rr === r && cc === c);
   b.cells.forEach(([r, c]) => {
-    for (const sr of [-1, 1]) {
-      for (const sc of [-1, 1]) {
-        if (has(r + sr, c + sc) || !has(r, c + sc) || !has(r + sr, c)) continue;
-        const vx = c * STEP + (sc > 0 ? CELL : 0) - c0 * STEP;
-        const vy = r * STEP + (sr > 0 ? CELL : 0) - r0 * STEP;
-        const f = document.createElement("div");
-        f.className = "fillet";
-        f.style.left = (sc < 0 ? vx - FR : vx) + "px";
-        f.style.top = (sr < 0 ? vy - FR : vy) + "px";
-        f.style.width = f.style.height = FR + "px";
-        f.style.background = `radial-gradient(circle at ${sc < 0 ? 0 : 100}% ${sr < 0 ? 0 : 100}%, transparent ${FR - 0.5}px, ${b.color} ${FR}px)`;
-        wrapper.appendChild(f);
-      }
-    }
+    if (hasCell(r + 1, c) || !hasCell(r, c - 1) || !hasCell(r + 1, c - 1)) return;
+    const j = document.createElement("div");
+    j.className = "lip-joint";
+    j.style.left = (c - c0) * STEP - GAP + "px";
+    j.style.top = (r - r0) * STEP + CELL + "px";
+    j.style.width = GAP + "px";
+    j.style.height = GAP + "px";
+    j.style.background = `color-mix(in srgb, ${b.color} 52%, #120a40)`;
+    wrapper.appendChild(j);
   });
 
   b.el = wrapper;
@@ -561,6 +555,7 @@ function exitBlock(block, el, state) {
 
   // slide on through the gate; the edge of the grid hides the block as it goes
   el.style.pointerEvents = "none";
+  el.classList.add("gone");
   el.style.transition =
     "left 0.25s ease-in, top 0.25s ease-in, opacity 0.25s ease-in";
   el.style.left = (Math.min(...cols) + state.dc + vc * colSpan) * STEP + "px";

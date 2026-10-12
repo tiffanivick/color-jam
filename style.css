@@ -595,8 +595,9 @@ body[data-world="dusk"] #deco i { bottom: -6%; width: calc(30px * var(--s)); hei
   /* soft top-light on every stud-sized square */
   background-image: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.3) 0%,
-    rgba(255, 255, 255, 0) 48%,
+    rgba(255, 255, 255, 0.3) 0px,
+    rgba(255, 255, 255, 0) 23px,
+    rgba(0, 0, 0, 0.16) 48px,
     rgba(0, 0, 0, 0.16) 100%
   );
 }
@@ -968,3 +969,10 @@ body[data-world="dusk"] #deco i { bottom: -6%; width: calc(30px * var(--s)); hei
 /* home-screen app on iPhones that give the page a short window: sit the nav icons as low as possible */
 html.vp-short .tabbar { padding-top: 12px; padding-bottom: 5px; }
 html.vp-short .tab { padding-bottom: 3px; }
+
+/* only a block's own squares catch touches: an L-shaped block's empty corner must not steal taps meant for its neighbour */
+.block-group { pointer-events: none; }
+.block-group > * { pointer-events: auto; }
+.block-group.gone > * { pointer-events: none; }
+.lip-joint { position: absolute; pointer-events: none; }
+.frozen .lip-joint, .thaw .lip-joint { display: none; }

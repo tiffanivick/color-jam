@@ -1058,6 +1058,7 @@ function popBlock(b) {
   b.removed = true;
   const e = b.el;
   e.style.pointerEvents = "none";
+  e.classList.add("gone");
   burst(
     PADDING + parseFloat(e.style.left) + parseFloat(e.style.width) / 2,
     PADDING + parseFloat(e.style.top) + parseFloat(e.style.height) / 2,
