@@ -1018,4 +1018,9 @@ html.vp-short .tab { padding-bottom: 3px; }
 /* shop swatch for the style row */
 .skin-swatch { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 12px; background: #4d7bff; box-shadow: 0 4px 0 #2b4bb0; }
 .skin-swatch i { width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, rgba(255,255,255,0.15) 60%); box-shadow: 0 2px 0 #2b4bb0; }
-.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray):not(.gone) { filter: drop-shadow(0 6px 5px rgba(10,6,40,0.38)) drop-shadow(0 14px 14px rgba(10,6,40,0.22)); }
+.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) { filter: drop-shadow(0 6px 5px rgba(10,6,40,0.38)) drop-shadow(0 14px 14px rgba(10,6,40,0.22)); }
+
+/* every block (and the clipped layer they move in) gets its own GPU layer: iPhone Safari can leave
+   smeared trails when a shadowed element moves with left/top inside an overflow-hidden parent */
+.pieces { transform: translateZ(0); }
+.block-group { will-change: left, top, transform; transform: translateZ(0); -webkit-backface-visibility: hidden; backface-visibility: hidden; }
