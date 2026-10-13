@@ -1109,6 +1109,9 @@ $("boosterFreeze").addEventListener("click", () => {
   usePower("freeze");
   Sfx.crack();
   freezeUntil = performance.now() + 10000;
+  try {
+    freezeFX(10000);
+  } catch (e) {}
   toast("Clock frozen for 10 seconds");
   updateBoosters();
   setTimeout(updateBoosters, 10100);

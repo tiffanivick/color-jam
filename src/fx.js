@@ -1,11 +1,32 @@
 // FX: power-up animations you can see.
 //  Hammer — a cute toy hammer rises from the bottom of the screen, rears back toward you,
 //           slams down, and the block cracks and breaks into real pieces of itself.
-//  Vacuum — a nozzle comes down on its hose, the block trembles, lifts and is slurped into
-//           the opening; a lump in the block's colour then runs up the hose.
+//  Vacuum — a canister vacuum rolls in at the bottom, you hold the wand, the block is slurped
+//           into the floor head and rides down the hose into the canister's window.
+//  Freeze — you wave an ice wand; snowflakes burst out and frost covers the board.
 // Uses boardEl, PADDING, CELL, STEP and burst() from engine.js.
 
-const FX_HAMMER_SVG = `<svg viewBox="0 0 140 230" width="140" height="230" aria-hidden="true">
+
+// a white cartoon glove holding a handle (fist centred on cx, top at `top`), with a sleeve
+// running down off the bottom of the screen — so it feels like it's your hand
+function fxGlove(cx, top, id, lean = 0, sleeve = "#5b7cff") {
+  return `<defs>
+    <linearGradient id="fxg-${id}" x1="0" x2="1"><stop offset="0" stop-color="#000" stop-opacity="0.18"/><stop offset="0.4" stop-color="#fff" stop-opacity="0.3"/><stop offset="1" stop-color="#000" stop-opacity="0.25"/></linearGradient>
+    <linearGradient id="fxw-${id}" x1="0" x2="1"><stop offset="0" stop-color="#dfe0ee"/><stop offset="0.42" stop-color="#ffffff"/><stop offset="1" stop-color="#c6c8dc"/></linearGradient>
+  </defs>
+  <g transform="rotate(${lean} ${cx} ${top + 22})">
+    <rect x="${cx - 21}" y="${top + 44}" width="42" height="240" rx="14" fill="${sleeve}"/>
+    <rect x="${cx - 21}" y="${top + 44}" width="42" height="240" rx="14" fill="url(#fxg-${id})" stroke="rgba(10,10,60,0.35)" stroke-width="2"/>
+    <rect x="${cx - 25}" y="${top + 35}" width="50" height="18" rx="8" fill="url(#fxw-${id})" stroke="#a3a5c0" stroke-width="2"/>
+    <path d="M${cx - 16} ${top + 39}v10M${cx - 6} ${top + 39}v10M${cx + 4} ${top + 39}v10M${cx + 14} ${top + 39}v10" stroke="#c3c5da" stroke-width="2"/>
+  </g>
+  <rect x="${cx - 27}" y="${top}" width="54" height="42" rx="18" fill="url(#fxw-${id})" stroke="#a3a5c0" stroke-width="2.5"/>
+  <path d="M${cx - 19} ${top + 15}h38M${cx - 21} ${top + 25}h42M${cx - 18} ${top + 34}h36" stroke="#c3c5da" stroke-width="2" stroke-linecap="round"/>
+  <path d="M${cx - 26} ${top + 13}c2-13 19-15 31-9 6 3 5 10-1 11-9 1-19 0-25 5Z" fill="url(#fxw-${id})" stroke="#a3a5c0" stroke-width="2.2" stroke-linejoin="round"/>
+  <ellipse cx="${cx - 12}" cy="${top + 7}" rx="7" ry="2.4" fill="#fff"/>`;
+}
+
+const FX_HAMMER_SVG = `<svg viewBox="0 0 140 430" width="140" height="430" style="overflow:visible" aria-hidden="true">
   <defs>
     <linearGradient id="fxh-body" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#ff8fa0"/><stop offset="0.35" stop-color="#ff4d5e"/><stop offset="1" stop-color="#b51d36"/>
@@ -35,38 +56,39 @@ const FX_HAMMER_SVG = `<svg viewBox="0 0 140 230" width="140" height="230" aria-
   <rect x="44" y="26" width="18" height="4" rx="2" fill="#fff" opacity="0.8"/>
   <!-- a little star sticker -->
   <path d="M70 46l3.5 7.2 7.9 1.1-5.7 5.6 1.4 7.8-7.1-3.7-7.1 3.7 1.4-7.8-5.7-5.6 7.9-1.1Z" fill="#fff6c8" stroke="#ffd447" stroke-width="1.5" stroke-linejoin="round"/>
+  ${fxGlove(70, 166, 'h', 4)}
 </svg>`;
 
-const FX_VACUUM_SVG = `<svg viewBox="0 0 160 340" width="160" height="340" aria-hidden="true">
-  <defs>
-    <linearGradient id="fxv-body" x1="0" x2="1"><stop offset="0" stop-color="#8a6cf0"/><stop offset="0.42" stop-color="#c6b4ff"/><stop offset="1" stop-color="#7457e0"/></linearGradient>
-    <linearGradient id="fxv-nose" x1="0" x2="1"><stop offset="0" stop-color="#ff7fb0"/><stop offset="0.45" stop-color="#ffc2da"/><stop offset="1" stop-color="#f0609a"/></linearGradient>
-    <linearGradient id="fxv-glass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8f7ff" stop-opacity="0.95"/><stop offset="1" stop-color="#9fd8ff" stop-opacity="0.85"/></linearGradient>
-    <linearGradient id="fxv-handle" x1="0" x2="1"><stop offset="0" stop-color="#5b44c0"/><stop offset="0.45" stop-color="#9b84ff"/><stop offset="1" stop-color="#4b36a8"/></linearGradient>
-    <clipPath id="fxv-win"><rect x="44" y="148" width="72" height="56" rx="14"/></clipPath>
-  </defs>
-  <!-- handle running off the bottom of the screen -->
-  <rect x="62" y="232" width="36" height="108" rx="16" fill="url(#fxv-handle)" stroke="#3a2690" stroke-width="2.5"/>
-  <rect x="70" y="240" width="7" height="90" rx="3.5" fill="#fff" opacity="0.4"/>
-  <!-- round body -->
-  <rect x="22" y="78" width="116" height="160" rx="46" fill="url(#fxv-body)" stroke="#4b36a8" stroke-width="3"/>
-  <ellipse cx="58" cy="100" rx="22" ry="9" fill="#fff" opacity="0.45"/>
-  <!-- see-through canister: collected blocks show up in here -->
-  <rect x="44" y="148" width="72" height="56" rx="14" fill="url(#fxv-glass)" stroke="#4b36a8" stroke-width="2.5"/>
-  <g class="vac-bits" clip-path="url(#fxv-win)"></g>
-  <rect x="50" y="153" width="20" height="5" rx="2.5" fill="#fff" opacity="0.8"/>
-  <!-- happy face -->
-  <ellipse cx="62" cy="122" rx="6" ry="7.5" fill="#2a1a5e"/><ellipse cx="98" cy="122" rx="6" ry="7.5" fill="#2a1a5e"/>
-  <circle cx="64" cy="119" r="2.2" fill="#fff"/><circle cx="100" cy="119" r="2.2" fill="#fff"/>
-  <path d="M71 133q9 8 18 0" fill="none" stroke="#2a1a5e" stroke-width="3" stroke-linecap="round"/>
-  <ellipse cx="50" cy="134" rx="7" ry="4" fill="#ff8fc0" opacity="0.7"/><ellipse cx="110" cy="134" rx="7" ry="4" fill="#ff8fc0" opacity="0.7"/>
-  <!-- nozzle: a soft pink funnel with the opening facing up at the block -->
-  <path d="M56 82 46 40h68l-10 42Z" fill="url(#fxv-nose)" stroke="#c43c78" stroke-width="2.5" stroke-linejoin="round"/>
-  <rect x="62" y="48" width="7" height="28" rx="3.5" fill="#fff" opacity="0.5"/>
-  <ellipse cx="80" cy="34" rx="50" ry="17" fill="url(#fxv-nose)" stroke="#c43c78" stroke-width="2.5"/>
-  <ellipse cx="80" cy="34" rx="38" ry="11" fill="#2a1030"/>
-  <ellipse cx="80" cy="36" rx="28" ry="7" fill="#000" opacity="0.6"/>
-</svg>`;
+// the canister (130x120, hose collar at 65,6)
+const FX_CAN_SVG = `
+  <ellipse cx="65" cy="117" rx="58" ry="7" fill="#0a0628" opacity="0.3"/>
+  <path d="M14 102C6 60 22 13 65 11c43 2 59 49 51 91q0 10-10 10H24q-10 0-10-10Z" fill="url(#vc-body)" stroke="#123f9e" stroke-width="2.5"/>
+  <path d="M26 92C20 60 32 26 60 20" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity="0.32"/>
+  <ellipse cx="40" cy="36" rx="7" ry="12" transform="rotate(30 40 36)" fill="#fff" opacity="0.45"/>
+  <rect x="53" y="1" width="24" height="16" rx="5" fill="url(#vc-metal)" stroke="#5d6676" stroke-width="2"/>
+  <circle cx="45" cy="50" r="7.5" fill="#ff4d6a" stroke="#b3203c" stroke-width="1.5"/><circle cx="43" cy="48" r="2.4" fill="#fff" opacity="0.7"/>
+  <circle cx="75" cy="50" r="7.5" fill="#ffb21f" stroke="#b97808" stroke-width="1.5"/><circle cx="73" cy="48" r="2.4" fill="#fff" opacity="0.7"/>
+  <rect x="31" y="64" width="54" height="34" rx="7" fill="url(#vc-glass)" stroke="#123f9e" stroke-width="2.2"/>
+  <g class="vc-bits" clip-path="url(#vc-win)"></g>
+  <rect x="35" y="68" width="16" height="4" rx="2" fill="#fff" opacity="0.8"/>
+  <circle cx="24" cy="106" r="11" fill="#22252d" stroke="#000" stroke-width="1.5"/><circle cx="24" cy="106" r="4" fill="#8b93a3"/>
+  <circle cx="104" cy="106" r="11" fill="#22252d" stroke="#000" stroke-width="1.5"/><circle cx="104" cy="106" r="4" fill="#8b93a3"/>`;
+// the floor head sits at 0,0 with the metal wand running down to the handle you hold (hose at 0,182)
+const FX_WAND_SVG = (lean) => `
+  <rect x="-5" y="8" width="10" height="128" rx="4" fill="url(#vc-metal)" stroke="#5d6676" stroke-width="1.5"/>
+  <rect x="-10" y="128" width="20" height="56" rx="8" fill="#353b48" stroke="#1d2129" stroke-width="2"/>
+  ${fxGlove(0, 134, "v", lean)}
+  <rect x="-48" y="-14" width="96" height="27" rx="11" fill="#2a2e37" stroke="#101217" stroke-width="2"/>
+  <rect x="-43" y="-11" width="86" height="10" rx="5" fill="#4b525f"/>
+  <rect x="-36" y="3" width="72" height="5" rx="2.5" fill="#07080b"/>
+  <circle cx="38" cy="-6" r="2" fill="#7fd3ff"/>
+  <rect x="-9" y="9" width="18" height="11" rx="3" fill="url(#vc-metal)" stroke="#5d6676" stroke-width="1.5"/>`;
+const FX_VAC_DEFS = `<defs>
+  <linearGradient id="vc-body" x1="0" x2="1"><stop offset="0" stop-color="#1e5fd8"/><stop offset="0.38" stop-color="#4fa2ff"/><stop offset="1" stop-color="#1747b0"/></linearGradient>
+  <linearGradient id="vc-metal" x1="0" x2="1"><stop offset="0" stop-color="#8f98a8"/><stop offset="0.45" stop-color="#f4f6fa"/><stop offset="1" stop-color="#7d8696"/></linearGradient>
+  <linearGradient id="vc-glass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9f6ff"/><stop offset="1" stop-color="#93cdf7"/></linearGradient>
+  <clipPath id="vc-win"><rect x="31" y="64" width="54" height="34" rx="7"/></clipPath>
+</defs>`;
 
 let fxBusy = 0; // how many power-up animations are playing
 
@@ -255,127 +277,278 @@ function hammerFX(b, done) {
 }
 
 // ---------------------------------------------------------------- Vacuum
+// The canister rolls up at the bottom of the board, you hold the wand, and the floor head
+// hovers by the block. Driven by one clock so the hose always stays attached.
 function vacuumFX(group, done) {
   fxBusy++;
+  const K = window.__FXK || 1;
+  const W = boardEl.clientWidth;
+  const H = boardEl.clientHeight;
   const spot = fxSpot(group[0]);
-  // the opening (80,34) of the 160x340 vacuum sits just below the tapped square; the body and
-  // handle run down toward you and off the bottom of the board
-  const mouth = { x: spot.x, y: spot.y + 30 };
-  const n = fxEl("fx-vacuum", FX_VACUUM_SVG);
-  n.style.left = mouth.x - 80 + "px";
-  n.style.top = mouth.y - 34 + "px";
-  n.style.transformOrigin = "80px 34px";
-  n.animate(
-    [
-      { transform: "perspective(700px) translateY(380px) rotateX(-25deg) rotate(6deg)", opacity: 0 },
-      { transform: "perspective(700px) translateY(-6px) rotateX(-12deg) rotate(-2deg)", opacity: 1, offset: 0.75 },
-      { transform: "perspective(700px) translateY(0) rotateX(-10deg) rotate(0)", opacity: 1 },
-    ],
-    { duration: 380, easing: "cubic-bezier(.2,.8,.3,1)", fill: "forwards" },
-  );
-  setTimeout(() => Sfx.suck(), 200);
-  // air and dust rushing into the opening
-  const swirl = setInterval(() => {
-    for (let i = 0; i < 4; i++) {
-      const a = -Math.PI * (0.05 + Math.random() * 0.9); // from above the opening
-      const d = 50 + Math.random() * 60;
-      const sx = mouth.x + Math.cos(a) * d;
-      const sy = mouth.y + Math.sin(a) * d;
+  const head = { x: spot.x, y: spot.y + 32 };
+  const canLeft = head.x > W / 2;
+  const can = { x: canLeft ? -6 : W - 138, y: H - 78 };
+  const toCan = canLeft ? -1 : 1;
+  const ang = canLeft ? -12 : 12; // the wand leans away from the canister, toward your hand
+  const wrap = fxEl("fx-vac");
+  wrap.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="overflow:visible;position:absolute;left:0;top:0">${FX_VAC_DEFS}
+    <g class="root">
+      <path class="h1" fill="none" stroke="#7d8798" stroke-width="17" stroke-linecap="round"/>
+      <path class="h2" fill="none" stroke="#e6ebf2" stroke-width="12" stroke-linecap="round"/>
+      <path class="h3" fill="none" stroke="#c4ccd8" stroke-width="12" stroke-dasharray="2.5 6"/>
+      <path class="h4" fill="none" stroke="#fff" stroke-width="3" opacity="0.7" transform="translate(-3 -2)"/>
+      <g class="lumps"></g>
+      <g class="can">${FX_CAN_SVG}</g>
+      <g class="wand">${FX_WAND_SVG(canLeft ? -18 : 18)}</g>
+    </g></svg>`;
+  const q = (c) => wrap.querySelector(c);
+  const root = q(".root");
+  const hoses = [".h1", ".h2", ".h3", ".h4"].map(q);
+  const canG = q(".can");
+  const wand = q(".wand");
+  const lumpsG = q(".lumps");
+  const bits = q(".vc-bits");
+  const NS = "http://www.w3.org/2000/svg";
+
+  const START = 480;
+  const EACH = 300;
+  const SLURP = 780;
+  const RUN = 520; // a sucked-up block's trip down the hose
+  const n = group.length;
+  const OUT = START + (n - 1) * EACH + SLURP + RUN + 280;
+  const END = OUT + 420;
+  const slurped = [];
+  const lumps = [];
+  let bump = -1e9;
+  let lastPuff = -1;
+  let t0 = performance.now();
+
+  function layout(t) {
+    const dy = t < 420 ? 330 * Math.pow(1 - t / 420, 3) : t > OUT ? 340 * Math.pow(Math.min(1, (t - OUT) / 420), 2) : 0;
+    const working = t > START - 80 && t < OUT;
+    const wob = working ? Math.sin(t / 37) * 1.6 : 0;
+    root.setAttribute("transform", `translate(0 ${dy})`);
+    wand.setAttribute("transform", `translate(${head.x + (working ? Math.sin(t / 53) * 1.2 : 0)} ${head.y}) rotate(${ang + wob})`);
+    const b = Math.max(0, 1 - (t - bump) / 260);
+    const sq = Math.sin(b * Math.PI) * 0.09;
+    canG.setAttribute("transform", `translate(${can.x} ${can.y}) translate(65 112) scale(1.15) scale(${1 + sq} ${1 - sq + (working ? Math.sin(t / 45) * 0.012 : 0)}) translate(-65 -112)`);
+    const a = ((ang + wob) * Math.PI) / 180;
+    // the hose leaves the back of the handle, arches up and over, and drops into the canister
+    const p = { x: head.x - Math.sin(a) * 136, y: head.y + Math.cos(a) * 136 };
+    const c = { x: can.x + 65, y: can.y + 112 - 1.15 * 106 };
+    const top = Math.min(p.y, c.y) - 110;
+    const d = `M${p.x.toFixed(1)} ${p.y.toFixed(1)}C${(p.x + toCan * 30).toFixed(1)} ${top.toFixed(1)} ${c.x.toFixed(1)} ${(top - 20).toFixed(1)} ${c.x.toFixed(1)} ${c.y.toFixed(1)}`;
+    hoses.forEach((h) => h.setAttribute("d", d));
+  }
+
+  function puff() {
+    for (let i = 0; i < 3; i++) {
+      const a = -Math.PI * (0.05 + Math.random() * 0.9);
+      const dd = 50 + Math.random() * 60;
+      const sx = head.x + Math.cos(a) * dd;
+      const sy = head.y + Math.sin(a) * dd;
       const s = document.createElement("div");
       s.className = Math.random() < 0.35 ? "fx-dust" : "fx-air";
       s.style.left = sx + "px";
       s.style.top = sy + "px";
-      const ang = Math.atan2(mouth.y - sy, mouth.x - sx);
+      const ga = Math.atan2(head.y - sy, head.x - sx);
       boardEl.appendChild(s);
       s.animate(
         [
-          { transform: `rotate(${ang}rad) translateX(0) scaleX(0.4)`, opacity: 0 },
-          { transform: `rotate(${ang + 0.3}rad) translateX(${d * 0.55}px) scaleX(1)`, opacity: 0.95, offset: 0.5 },
-          { transform: `rotate(${ang + 0.5}rad) translateX(${d}px) scaleX(0.2)`, opacity: 0 },
+          { transform: `rotate(${ga}rad) translateX(0) scaleX(0.4)`, opacity: 0 },
+          { transform: `rotate(${ga + 0.3}rad) translateX(${dd * 0.55}px) scaleX(1)`, opacity: 0.95, offset: 0.5 },
+          { transform: `rotate(${ga + 0.5}rad) translateX(${dd}px) scaleX(0.2)`, opacity: 0 },
         ],
         { duration: 380, easing: "ease-in", fill: "forwards" },
-      );
-      setTimeout(() => s.remove(), 400);
+      ).onfinish = () => s.remove();
     }
-  }, 60);
-  // the vacuum wiggles while it works
-  let hum = null;
-  setTimeout(() => {
-    hum = n.animate(
-      [
-        { transform: "perspective(700px) rotateX(-10deg) rotate(0) scale(1)" },
-        { transform: "perspective(700px) rotateX(-10deg) rotate(-1.5deg) scale(1.02, 0.98)" },
-        { transform: "perspective(700px) rotateX(-10deg) rotate(1.5deg) scale(0.98, 1.02)" },
-        { transform: "perspective(700px) rotateX(-10deg) rotate(0) scale(1)" },
-      ],
-      { duration: 160, iterations: Infinity },
-    );
-  }, 380);
-  const bits = n.querySelector(".vac-bits");
-  const START = 420;
-  const EACH = 280;
-  const SLURP = 780;
-  group.forEach((b, i) => {
+  }
+
+  function sparkle() {
+    for (let i = 0; i < 4; i++) {
+      const s = document.createElement("div");
+      s.className = "fx-spark";
+      s.style.left = head.x + (Math.random() - 0.5) * 110 + "px";
+      s.style.top = head.y - 10 - Math.random() * 50 + "px";
+      boardEl.appendChild(s);
+      s.animate(
+        [{ transform: "scale(0) rotate(0)", opacity: 1 }, { transform: "scale(1.1) rotate(45deg)", opacity: 1, offset: 0.4 }, { transform: "scale(0) rotate(90deg)", opacity: 0 }],
+        { duration: 560, delay: i * 70, easing: "ease-out", fill: "both" },
+      ).onfinish = () => s.remove();
+    }
+  }
+
+  function startSlurp(i) {
+    const b = group[i];
     const el = b.el;
     const r = fxRect(b);
-    setTimeout(() => {
-      el.style.transition = "none";
-      el.style.animation = "none";
-      boardEl.appendChild(el); // out of the board's clipping, above the vacuum
-      el.style.zIndex = "33";
-      el.style.transformOrigin = mouth.x - r.x + "px " + (mouth.y - r.y) + "px";
-      el.animate(
-        [
-          { transform: "translateZ(0) rotate(0) scale(1,1)", opacity: 1, offset: 0 },
-          { transform: "translateZ(0) rotate(-2deg) scale(1.02,0.98)", opacity: 1, offset: 0.08 },
-          { transform: "translateZ(0) rotate(2deg) scale(0.98,1.02)", opacity: 1, offset: 0.16 },
-          { transform: "translateZ(0) rotate(-2deg) scale(1.04,1.04)", opacity: 1, offset: 0.26 },
-          { transform: "translateZ(0) rotate(5deg) scale(0.86,1.16)", opacity: 1, offset: 0.48 },
-          { transform: "translateZ(0) rotate(-8deg) scale(0.45,0.8)", opacity: 1, offset: 0.74 },
-          { transform: "translateZ(0) rotate(14deg) scale(0.04,0.1)", opacity: 0, offset: 1 },
-        ],
-        { duration: SLURP, easing: "cubic-bezier(.5,0,.9,.6)", fill: "forwards" },
-      );
-      setTimeout(() => {
-        Sfx.pop();
-        el.remove();
-        // it lands in the see-through canister
-        if (bits) {
-          const NS = "http://www.w3.org/2000/svg";
-          for (let k = 0; k < 3; k++) {
-            const c = document.createElementNS(NS, "rect");
-            const w = 14 + Math.random() * 8;
-            c.setAttribute("x", 48 + Math.random() * 50);
-            c.setAttribute("y", 184 - i * 7 - Math.random() * 10);
-            c.setAttribute("width", w);
-            c.setAttribute("height", w * 0.8);
-            c.setAttribute("rx", 4);
-            c.setAttribute("fill", b.color);
-            c.setAttribute("stroke", "rgba(0,0,0,0.25)");
-            c.setAttribute("transform", `rotate(${(Math.random() - 0.5) * 50} 80 176)`);
-            c.style.animation = "fx-bit-in 0.3s ease-out";
-            bits.appendChild(c);
-          }
-        }
-        n.animate([{ transform: "perspective(700px) rotateX(-10deg) scale(1.06, 0.95)" }, { transform: "perspective(700px) rotateX(-10deg) scale(1)" }], { duration: 160 });
-      }, SLURP);
-    }, START + i * EACH);
-  });
-  const end = START + (group.length - 1) * EACH + SLURP;
-  setTimeout(() => clearInterval(swirl), end - 100);
-  setTimeout(() => {
-    if (hum) hum.cancel();
-    n.animate(
+    el.style.transition = "none";
+    el.style.animation = "none";
+    boardEl.appendChild(el); // out of the board's clipping, just under the floor head
+    el.style.zIndex = "33";
+    el.style.transformOrigin = head.x - r.x + "px " + (head.y - r.y) + "px";
+    el.animate(
       [
-        { transform: "perspective(700px) translateY(0) rotateX(-10deg)", opacity: 1 },
-        { transform: "perspective(700px) translateY(360px) rotateX(-25deg)", opacity: 0 },
+        { transform: "translateZ(0) rotate(0) scale(1,1)", opacity: 1, offset: 0 },
+        { transform: "translateZ(0) rotate(-2deg) scale(1.02,0.98)", opacity: 1, offset: 0.08 },
+        { transform: "translateZ(0) rotate(2deg) scale(0.98,1.02)", opacity: 1, offset: 0.16 },
+        { transform: "translateZ(0) rotate(-2deg) scale(1.04,1.04)", opacity: 1, offset: 0.26 },
+        { transform: "translateZ(0) rotate(5deg) scale(0.86,1.16)", opacity: 1, offset: 0.48 },
+        { transform: "translateZ(0) rotate(-8deg) scale(0.45,0.8)", opacity: 1, offset: 0.74 },
+        { transform: "translateZ(0) rotate(14deg) scale(0.04,0.1)", opacity: 0, offset: 1 },
       ],
-      { duration: 380, easing: "ease-in", fill: "forwards" },
+      { duration: SLURP, easing: "cubic-bezier(.5,0,.9,.6)", fill: "forwards" },
     );
-  }, end + 450);
-  setTimeout(() => {
-    n.remove();
+  }
+
+  function arrive(b, i) {
+    for (let k = 0; k < 3; k++) {
+      const c = document.createElementNS(NS, "rect");
+      const w = 12 + Math.random() * 7;
+      c.setAttribute("x", 34 + Math.random() * 36);
+      c.setAttribute("y", 86 - i * 6 - Math.random() * 8);
+      c.setAttribute("width", w);
+      c.setAttribute("height", w * 0.8);
+      c.setAttribute("rx", 3);
+      c.setAttribute("fill", b.color);
+      c.setAttribute("stroke", "rgba(0,0,0,0.25)");
+      c.setAttribute("transform", `rotate(${(Math.random() - 0.5) * 50} 58 82)`);
+      c.style.animation = "fx-bit-in 0.3s ease-out";
+      bits.appendChild(c);
+    }
+  }
+
+  layout(0);
+  setTimeout(() => Sfx.suck(), 260);
+  function frame(now) {
+    const t = (now - t0) / K;
+    layout(t);
+    if (t > START - 100 && t < OUT - RUN) {
+      const pf = Math.floor(t / 70);
+      if (pf !== lastPuff) {
+        lastPuff = pf;
+        puff();
+      }
+    }
+    for (let i = 0; i < n; i++) {
+      const at = START + i * EACH;
+      if (!slurped[i] && t >= at) {
+        slurped[i] = 1;
+        startSlurp(i);
+      }
+      if (slurped[i] === 1 && t >= at + SLURP) {
+        slurped[i] = 2;
+        Sfx.pop();
+        group[i].el.remove();
+        sparkle();
+        const c = document.createElementNS(NS, "circle");
+        c.setAttribute("r", "10");
+        c.setAttribute("fill", group[i].color);
+        c.setAttribute("stroke", "rgba(0,0,0,0.3)");
+        c.setAttribute("stroke-width", "2");
+        lumpsG.appendChild(c);
+        lumps.push({ c, at: at + SLURP, i, done: false });
+      }
+    }
+    const path = hoses[0];
+    const len = path.getTotalLength();
+    lumps.forEach((L) => {
+      if (L.done) return;
+      const u = Math.min(1, (t - L.at) / RUN);
+      const pt = path.getPointAtLength(len * (u * u * (3 - 2 * u)));
+      L.c.setAttribute("cx", pt.x);
+      L.c.setAttribute("cy", pt.y);
+      L.c.setAttribute("r", String(10 + Math.sin(u * Math.PI) * 2));
+      if (u >= 1) {
+        L.done = true;
+        L.c.remove();
+        bump = t;
+        Sfx.tap();
+        arrive(group[L.i], L.i);
+      }
+    });
+    if (t < END) return requestAnimationFrame(frame);
+    wrap.remove();
     fxBusy--;
     done && done();
-  }, end + 850);
+  }
+  requestAnimationFrame(frame);
+}
+
+// ---------------------------------------------------------------- Freeze
+const FX_ICEWAND_SVG = `<svg viewBox="0 0 120 440" width="120" height="440" style="overflow:visible" aria-hidden="true">
+  <defs>
+    <linearGradient id="fi-stick" x1="0" x2="1"><stop offset="0" stop-color="#8fd8ff"/><stop offset="0.45" stop-color="#ffffff"/><stop offset="1" stop-color="#5cbfee"/></linearGradient>
+    <radialGradient id="fi-gem" cx="0.38" cy="0.32" r="0.75"><stop offset="0" stop-color="#ffffff"/><stop offset="0.45" stop-color="#9fe6ff"/><stop offset="1" stop-color="#2fa8e6"/></radialGradient>
+  </defs>
+  <rect x="53" y="60" width="14" height="190" rx="7" fill="url(#fi-stick)" stroke="#3592c4" stroke-width="2"/>
+  <path d="M55 90l10-8M55 120l10-8M55 150l10-8M55 180l10-8" stroke="#3592c4" stroke-width="2" opacity="0.5"/>
+  <circle cx="60" cy="44" r="34" fill="url(#fi-gem)" stroke="#2a8ac0" stroke-width="2.5"/>
+  <g stroke="#fff" stroke-width="5" stroke-linecap="round"><path d="M60 22v44M41 33l38 22M41 55l38-22"/></g>
+  <g stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M53 25l7 6 7-6M53 63l7-6 7 6M39 40l9 1-3 8M81 48l-9-1 3-8M39 48l9-1-3-8M81 40l-9 1 3 8"/></g>
+  <ellipse cx="47" cy="30" rx="7" ry="4" transform="rotate(-30 47 30)" fill="#fff" opacity="0.8"/>
+  ${fxGlove(60, 200, "f", 0, "#3fb6e8")}
+</svg>`;
+const FX_FLAKE = `<svg viewBox="-10 -10 20 20" width="100%" height="100%"><g stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M0-9V9M-7.8-4.5 7.8 4.5M-7.8 4.5 7.8-4.5M-2.5-7 0-4.5 2.5-7M-2.5 7 0 4.5 2.5 7"/></g></svg>`;
+function freezeFX(ms) {
+  const W = boardEl.clientWidth;
+  const H = boardEl.clientHeight;
+  const tip = { x: W / 2, y: H * 0.55 };
+  const w = fxEl("fx-icewand", FX_ICEWAND_SVG);
+  w.style.left = tip.x - 60 + "px";
+  w.style.top = tip.y - 44 + "px";
+  w.animate(
+    [
+      { transform: "translateY(380px) rotate(0)", opacity: 0 },
+      { transform: "translateY(-12px) rotate(-6deg)", opacity: 1, offset: 0.25 },
+      { transform: "translateY(0) rotate(16deg)", opacity: 1, offset: 0.38 },
+      { transform: "translateY(0) rotate(-14deg)", opacity: 1, offset: 0.5 },
+      { transform: "translateY(-6px) rotate(0) scale(1.06)", opacity: 1, offset: 0.6 },
+      { transform: "translateY(0) rotate(0) scale(1)", opacity: 1, offset: 0.75 },
+      { transform: "translateY(380px) rotate(0)", opacity: 0 },
+    ],
+    { duration: 1700, easing: "ease-in-out", fill: "forwards" },
+  );
+  setTimeout(() => w.remove(), 1750);
+  // the gem flashes and a blast of snowflakes covers the board
+  setTimeout(() => {
+    Sfx.freeze && Sfx.freeze();
+    const flash = document.createElement("div");
+    flash.className = "fx-flash fx-iceflash";
+    flash.style.left = tip.x - 36 + "px";
+    flash.style.top = tip.y - 36 + "px";
+    boardEl.appendChild(flash);
+    setTimeout(() => flash.remove(), 420);
+    for (let i = 0; i < 34; i++) {
+      const f = document.createElement("div");
+      f.className = "fx-flake";
+      f.innerHTML = FX_FLAKE;
+      const size = 10 + Math.random() * 16;
+      f.style.width = f.style.height = size + "px";
+      f.style.left = tip.x - size / 2 + "px";
+      f.style.top = tip.y - size / 2 + "px";
+      boardEl.appendChild(f);
+      const tx = Math.random() * W - tip.x;
+      const ty = Math.random() * H - tip.y;
+      f.animate(
+        [
+          { transform: "translate(0,0) rotate(0) scale(0.3)", opacity: 1 },
+          { transform: `translate(${tx * 0.8}px,${ty * 0.8}px) rotate(${180 + Math.random() * 180}deg) scale(1)`, opacity: 1, offset: 0.55 },
+          { transform: `translate(${tx}px,${ty + 30}px) rotate(${360 + Math.random() * 180}deg) scale(0.8)`, opacity: 0 },
+        ],
+        { duration: 1100 + Math.random() * 500, delay: Math.random() * 120, easing: "cubic-bezier(.2,.7,.4,1)", fill: "both" },
+      ).onfinish = () => f.remove();
+    }
+    // frost creeps in from the edges and stays while the clock is frozen
+    boardEl.querySelectorAll(".fx-frost").forEach((e) => e.remove());
+    const frost = document.createElement("div");
+    frost.className = "fx-frost";
+    frost.innerHTML = ["tl", "tr", "bl", "br"].map((c) => `<i class="ff-${c}">${FX_FLAKE}</i>`).join("");
+    boardEl.appendChild(frost);
+    frost.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500, fill: "forwards" });
+    const life = Math.max(1000, ms - 700);
+    setTimeout(() => {
+      frost.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 600, fill: "forwards" }).onfinish = () => frost.remove();
+    }, life);
+  }, 1000);
 }

@@ -1168,7 +1168,7 @@ body.skin-real[data-world="star"] .block-group:not(.gray, .crate, .frozen, .thaw
 
 /* ---------- power-up animations (fx.js) ---------- */
 .fx-tool { position: absolute; z-index: 30; pointer-events: none; }
-.fx-hammer { width: 140px; height: 230px; transform-origin: 70px 222px; filter: drop-shadow(0 10px 8px rgba(10, 6, 40, 0.45)); z-index: 31; }
+.fx-hammer { width: 140px; height: 430px; transform-origin: 70px 222px; filter: drop-shadow(0 10px 8px rgba(10, 6, 40, 0.45)); z-index: 31; }
 .fx-nozzle { width: 110px; height: 420px; filter: drop-shadow(0 8px 8px rgba(10, 6, 40, 0.45)); z-index: 31; }
 .fx-crack { position: absolute; width: 110px; height: 110px; pointer-events: none; z-index: 4;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Cpath d='M40 40 28 22 31 8M40 40l18-10 14 4M40 40l-6 18 6 16M40 40l20 14 4 14M40 40 18 48 6 44M28 22 18 18M58 30l6-12' fill='none' stroke='%23120a30' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round' opacity='0.75'/%3E%3Cpath d='M40 40 28 22 31 8M40 40l18-10 14 4M40 40l-6 18 6 16M40 40l20 14 4 14M40 40 18 48 6 44' fill='none' stroke='%23fff' stroke-width='1' stroke-linecap='round' opacity='0.55' transform='translate(1 1)'/%3E%3C/svg%3E") center / contain no-repeat;
@@ -1198,3 +1198,16 @@ body.skin-real[data-world="star"] .block-group:not(.gray, .crate, .frozen, .thaw
   background: radial-gradient(closest-side, rgba(10, 6, 40, 0.55), rgba(10, 6, 40, 0)); opacity: 0; }
 .fx-crack { transition: transform 0.12s ease-out, opacity 0.08s; }
 @keyframes fx-bit-in { from { transform: translateY(-30px); opacity: 0; } }
+.fx-vac { left: 0; top: 0; width: 0; height: 0; z-index: 34 !important; filter: drop-shadow(0 8px 7px rgba(10, 6, 40, 0.4)); }
+.fx-spark { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; pointer-events: none; z-index: 36;
+  background: #ffd447; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  filter: drop-shadow(0 0 3px rgba(255, 220, 90, 0.9)); }
+.fx-icewand { width: 120px; height: 440px; transform-origin: 60px 222px; z-index: 34; filter: drop-shadow(0 10px 8px rgba(10, 6, 40, 0.4)); }
+.fx-iceflash { background: radial-gradient(closest-side, #fff, rgba(160, 230, 255, 0.8), rgba(160, 230, 255, 0)) !important; width: 72px; height: 72px; }
+.fx-flake { position: absolute; pointer-events: none; z-index: 35; filter: drop-shadow(0 0 3px rgba(120, 210, 255, 0.95)); }
+.fx-frost { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 25;
+  box-shadow: inset 0 0 26px 8px rgba(215, 245, 255, 0.85), inset 0 0 60px 20px rgba(140, 215, 255, 0.35);
+  background: linear-gradient(180deg, rgba(200, 240, 255, 0.12), rgba(200, 240, 255, 0.04)); }
+.fx-frost i { position: absolute; width: 46px; height: 46px; opacity: 0.85; filter: drop-shadow(0 0 4px rgba(120, 210, 255, 0.9)); }
+.fx-frost .ff-tl { left: 4px; top: 4px; } .fx-frost .ff-tr { right: 4px; top: 4px; transform: rotate(20deg); }
+.fx-frost .ff-bl { left: 4px; bottom: 4px; transform: rotate(-15deg); } .fx-frost .ff-br { right: 4px; bottom: 4px; transform: rotate(35deg); }
