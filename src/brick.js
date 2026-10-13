@@ -24,13 +24,8 @@ function brickRects(cells, c0, r0) {
     const RD = has(r + 1, c + 1);
     if (R) rects.push([x + CELL, y, GAP, CELL]);
     if (D) rects.push([x, y + CELL, CELL, GAP]);
-    if (R + D + RD >= 2 && (R || D)) rects.push([x + CELL, y + CELL, GAP, GAP]);
-  }
-  // a gap-crossing square can also be needed from the other diagonal (┘ shape)
-  for (const [r, c] of cells) {
-    const x = (c - c0) * STEP;
-    const y = (r - r0) * STEP;
-    if (has(r, c - 1) && has(r + 1, c) && !has(r + 1, c - 1)) rects.push([x - GAP, y + CELL, GAP, GAP]);
+    // where gaps cross: only part of the block when all four squares around it are
+    if (R && D && RD) rects.push([x + CELL, y + CELL, GAP, GAP]);
   }
   return rects;
 }
