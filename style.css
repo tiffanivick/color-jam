@@ -1211,3 +1211,14 @@ body.skin-real[data-world="dusk"] .block-group:not(.gray, .crate, .frozen, .thaw
     0 6px 5px rgba(10, 6, 40, 0.35);
 }
 .skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) .block-cell.base { border-bottom-left-radius: 0 !important; border-bottom-right-radius: 0 !important; }
+
+/* the front wall sits INSIDE the block's own squares (bottom 8px), so neighbouring
+   blocks never overlap and every block reads as the same height */
+.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) .block-cell > .side { top: auto; bottom: 0; height: 8px; }
+.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) .lip-joint { height: 8px !important; margin-top: -8px; }
+/* studs sit in the middle of the top face, which is 8px shorter on a front-row square */
+.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray):not(.dir-h):not(.dir-v) .block-cell.base::after { top: 7px; }
+/* a tighter contact shadow that stays in the gap instead of falling on the next block */
+.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) {
+  filter: drop-shadow(0 2px 1.5px rgba(10, 6, 40, 0.4)) drop-shadow(0 5px 4px rgba(10, 6, 40, 0.22));
+}
