@@ -1121,27 +1121,31 @@ const touching = (a, b) => a.cells.some(([r, c]) => b.cells.some(([r2, c2]) => M
 function blast(b) {
   const mode = toolMode;
   setTool(null);
+  const finish = () => {
+    refreshIce();
+    updateBoosters();
+    checkWin();
+  };
   if (mode === "vacuum") {
     usePower("vacuum");
     S.stats.vacuumed++;
-    Sfx.whoosh();
     const group = [b, ...blocks.filter((o) => o !== b && !o.removed && touching(o, b))];
-    group.forEach((o, i) => setTimeout(() => popBlock(o), i * 90));
-    setTimeout(() => {
-      refreshIce();
-      updateBoosters();
-      checkWin();
-    }, group.length * 90 + 60);
+    // gone from the puzzle straight away; the animation just shows them being sucked up
+    group.forEach((o) => {
+      o.removed = true;
+      o.el.style.pointerEvents = "none";
+      o.el.classList.add("gone");
+    });
+    vacuumFX(group, finish);
     checkTrophies();
     return;
   }
   usePower("hammer");
   S.stats.blasted++;
-  Sfx.thud();
-  popBlock(b);
-  refreshIce();
-  updateBoosters();
-  checkWin();
+  b.removed = true;
+  b.el.style.pointerEvents = "none";
+  b.el.classList.add("gone");
+  hammerFX(b, finish);
   checkTrophies();
 }
 
