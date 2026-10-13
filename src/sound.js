@@ -85,8 +85,8 @@ const Sfx = (() => {
       tone(n * 1.5, 0.07, 0.14, "triangle", 0.1);
     },
     // hammer hitting a block: a heavy knock with a crunch on top
-    smash() {
-      tone(110, 0, 0.18, "sine", 0.22, 45);
+    smash(n = 2) {
+      tone(110 + n * 18, 0, 0.18, "sine", 0.22, 45);
       tone(220, 0, 0.06, "square", 0.05, 90);
       noise(0, 0.16, 0.12, 4200, 600);
     },

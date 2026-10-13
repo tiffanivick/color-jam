@@ -37,21 +37,35 @@ const FX_HAMMER_SVG = `<svg viewBox="0 0 140 230" width="140" height="230" aria-
   <path d="M70 46l3.5 7.2 7.9 1.1-5.7 5.6 1.4 7.8-7.1-3.7-7.1 3.7 1.4-7.8-5.7-5.6 7.9-1.1Z" fill="#fff6c8" stroke="#ffd447" stroke-width="1.5" stroke-linejoin="round"/>
 </svg>`;
 
-const FX_NOZZLE_SVG = `<svg viewBox="0 0 110 420" width="110" height="420" aria-hidden="true">
+const FX_VACUUM_SVG = `<svg viewBox="0 0 160 340" width="160" height="340" aria-hidden="true">
   <defs>
-    <linearGradient id="fxv-hose" x1="0" x2="1"><stop offset="0" stop-color="#4b2fa0"/><stop offset="0.42" stop-color="#a78bff"/><stop offset="1" stop-color="#3e2590"/></linearGradient>
-    <linearGradient id="fxv-head" x1="0" x2="1"><stop offset="0" stop-color="#7a8396"/><stop offset="0.4" stop-color="#f4f7fc"/><stop offset="1" stop-color="#8b94a6"/></linearGradient>
-    <linearGradient id="fxv-band" x1="0" x2="1"><stop offset="0" stop-color="#d9a514"/><stop offset="0.45" stop-color="#ffe680"/><stop offset="1" stop-color="#c98a10"/></linearGradient>
+    <linearGradient id="fxv-body" x1="0" x2="1"><stop offset="0" stop-color="#8a6cf0"/><stop offset="0.42" stop-color="#c6b4ff"/><stop offset="1" stop-color="#7457e0"/></linearGradient>
+    <linearGradient id="fxv-nose" x1="0" x2="1"><stop offset="0" stop-color="#ff7fb0"/><stop offset="0.45" stop-color="#ffc2da"/><stop offset="1" stop-color="#f0609a"/></linearGradient>
+    <linearGradient id="fxv-glass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8f7ff" stop-opacity="0.95"/><stop offset="1" stop-color="#9fd8ff" stop-opacity="0.85"/></linearGradient>
+    <linearGradient id="fxv-handle" x1="0" x2="1"><stop offset="0" stop-color="#5b44c0"/><stop offset="0.45" stop-color="#9b84ff"/><stop offset="1" stop-color="#4b36a8"/></linearGradient>
+    <clipPath id="fxv-win"><rect x="44" y="148" width="72" height="56" rx="14"/></clipPath>
   </defs>
-  <rect x="38" y="0" width="34" height="320" fill="url(#fxv-hose)"/>
-  <g stroke="#2e1a78" stroke-width="2.5" opacity="0.55">
-    ${Array.from({ length: 22 }, (_, i) => `<path d="M38 ${8 + i * 14}q17 6 34 0"/>`).join("")}
-  </g>
-  <rect x="32" y="312" width="46" height="16" rx="6" fill="url(#fxv-band)" stroke="#a8770a" stroke-width="2"/>
-  <path d="M34 326h42l22 62H12Z" fill="url(#fxv-head)" stroke="#4a5263" stroke-width="2.5" stroke-linejoin="round"/>
-  <rect x="44" y="334" width="8" height="40" rx="4" fill="#fff" opacity="0.6"/>
-  <ellipse cx="55" cy="388" rx="44" ry="11" fill="#2a2d40" stroke="#4a5263" stroke-width="2.5"/>
-  <ellipse cx="55" cy="387" rx="34" ry="7" fill="#05060c"/>
+  <!-- handle running off the bottom of the screen -->
+  <rect x="62" y="232" width="36" height="108" rx="16" fill="url(#fxv-handle)" stroke="#3a2690" stroke-width="2.5"/>
+  <rect x="70" y="240" width="7" height="90" rx="3.5" fill="#fff" opacity="0.4"/>
+  <!-- round body -->
+  <rect x="22" y="78" width="116" height="160" rx="46" fill="url(#fxv-body)" stroke="#4b36a8" stroke-width="3"/>
+  <ellipse cx="58" cy="100" rx="22" ry="9" fill="#fff" opacity="0.45"/>
+  <!-- see-through canister: collected blocks show up in here -->
+  <rect x="44" y="148" width="72" height="56" rx="14" fill="url(#fxv-glass)" stroke="#4b36a8" stroke-width="2.5"/>
+  <g class="vac-bits" clip-path="url(#fxv-win)"></g>
+  <rect x="50" y="153" width="20" height="5" rx="2.5" fill="#fff" opacity="0.8"/>
+  <!-- happy face -->
+  <ellipse cx="62" cy="122" rx="6" ry="7.5" fill="#2a1a5e"/><ellipse cx="98" cy="122" rx="6" ry="7.5" fill="#2a1a5e"/>
+  <circle cx="64" cy="119" r="2.2" fill="#fff"/><circle cx="100" cy="119" r="2.2" fill="#fff"/>
+  <path d="M71 133q9 8 18 0" fill="none" stroke="#2a1a5e" stroke-width="3" stroke-linecap="round"/>
+  <ellipse cx="50" cy="134" rx="7" ry="4" fill="#ff8fc0" opacity="0.7"/><ellipse cx="110" cy="134" rx="7" ry="4" fill="#ff8fc0" opacity="0.7"/>
+  <!-- nozzle: a soft pink funnel with the opening facing up at the block -->
+  <path d="M56 82 46 40h68l-10 42Z" fill="url(#fxv-nose)" stroke="#c43c78" stroke-width="2.5" stroke-linejoin="round"/>
+  <rect x="62" y="48" width="7" height="28" rx="3.5" fill="#fff" opacity="0.5"/>
+  <ellipse cx="80" cy="34" rx="50" ry="17" fill="url(#fxv-nose)" stroke="#c43c78" stroke-width="2.5"/>
+  <ellipse cx="80" cy="34" rx="38" ry="11" fill="#2a1030"/>
+  <ellipse cx="80" cy="36" rx="28" ry="7" fill="#000" opacity="0.6"/>
 </svg>`;
 
 let fxBusy = 0; // how many power-up animations are playing
@@ -88,94 +102,112 @@ function hammerFX(b, done) {
   const el = b.el;
   const r = fxRect(b);
   const hit = fxSpot(b);
-  // head centre (70,47) of the 140x230 hammer sits on the hit point; it pivots at the grip end
+  // the hammer's shadow on the board: small and dark when the head touches, wide and faint when raised
+  const shadow = fxEl("fx-hshadow");
+  shadow.style.left = hit.x - 46 + "px";
+  shadow.style.top = hit.y - 14 + "px";
+  // head centre (70,47) of the 140x230 hammer sits on the hit point; the handle runs down toward you
   const h = fxEl("fx-hammer", FX_HAMMER_SVG);
   h.style.left = hit.x - 70 + "px";
   h.style.top = hit.y - 47 + "px";
-  const D = 1000;
+  const D = 1600;
+  const HITS = [520, 820, 1110];
+  const P = {
+    start: "perspective(700px) translateY(360px) rotateX(-40deg) scale(0.9)",
+    up: "perspective(700px) translateY(-30px) rotateX(-30deg) scale(1.1)",
+    hit: "perspective(700px) translateY(0) rotateX(6deg) scale(0.86)",
+    bounce: "perspective(700px) translateY(-10px) rotateX(-10deg) scale(0.92)",
+    gone: "perspective(700px) translateY(340px) rotateX(-40deg) scale(0.88)",
+  };
+  const down = "cubic-bezier(.7,0,1,.55)";
+  const upE = "cubic-bezier(.2,.7,.4,1)";
+  const k = (t, pose, op, e) => ({ transform: P[pose], opacity: op, offset: t / D, easing: e });
   h.animate(
     [
-      { transform: "perspective(700px) translateY(320px) rotateX(-50deg) scale(0.9)", opacity: 0, offset: 0, easing: "cubic-bezier(.2,.8,.3,1)" },
-      { transform: "perspective(700px) translateY(40px) rotateX(-45deg) scale(1.02)", opacity: 1, offset: 0.3, easing: "ease-in-out" },
-      { transform: "perspective(700px) translateY(18px) rotateX(-62deg) scale(1.1)", opacity: 1, offset: 0.46, easing: "cubic-bezier(.7,0,1,.5)" },
-      { transform: "perspective(700px) translateY(0) rotateX(4deg) scale(0.85)", opacity: 1, offset: 0.58, easing: "ease-out" },
-      { transform: "perspective(700px) translateY(-2px) rotateX(-14deg) scale(0.9)", opacity: 1, offset: 0.7, easing: "ease-in" },
-      { transform: "perspective(700px) translateY(300px) rotateX(-40deg) scale(0.85)", opacity: 0, offset: 1 },
+      k(0, "start", 0, "cubic-bezier(.2,.8,.3,1)"),
+      k(340, "up", 1, down),
+      k(HITS[0], "hit", 1, upE),
+      k(680, "up", 1, down),
+      k(HITS[1], "hit", 1, upE),
+      k(960, "up", 1, down),
+      k(HITS[2], "hit", 1, upE),
+      k(1230, "bounce", 1, "ease-in"),
+      k(D, "gone", 0, "linear"),
     ],
     { duration: D, easing: "linear", fill: "forwards" },
   );
-  const IMPACT = D * 0.58;
+  const sk = (t, s, o) => ({ transform: `scale(${s})`, opacity: o, offset: t / D });
+  shadow.animate(
+    [sk(0, 1.5, 0), sk(340, 1.25, 0.16), sk(HITS[0], 0.75, 0.45), sk(680, 1.25, 0.16), sk(HITS[1], 0.75, 0.45), sk(960, 1.25, 0.16), sk(HITS[2], 0.75, 0.45), sk(1230, 0.9, 0.3), sk(D, 1.5, 0)],
+    { duration: D, easing: "linear", fill: "forwards" },
+  );
 
-  // impact: squash, cracks from the hit point, a flash and a jolt through the board
-  setTimeout(() => {
-    Sfx.smash();
-    el.animate(
-      [
-        { transform: "translateZ(0) scale(1, 1)" },
-        { transform: "translateZ(0) scale(1.06, 0.9)" },
-        { transform: "translateZ(0) scale(0.98, 1.02)" },
-        { transform: "translateZ(0) scale(1, 1)" },
-      ],
-      { duration: 200, easing: "ease-out" },
-    );
-    const crack = document.createElement("div");
-    crack.className = "fx-crack";
-    crack.style.left = hit.x - r.x - 55 + "px";
-    crack.style.top = hit.y - r.y - 55 + "px";
-    el.appendChild(crack);
-    const flash = document.createElement("div");
-    flash.className = "fx-flash";
-    flash.style.left = hit.x - 40 + "px";
-    flash.style.top = hit.y - 40 + "px";
-    boardEl.appendChild(flash);
-    setTimeout(() => flash.remove(), 420);
-    boardEl.animate(
-      [
-        { transform: "translate(0,0)" },
-        { transform: "translate(-5px,4px)" },
-        { transform: "translate(5px,-3px)" },
-        { transform: "translate(-2px,1px)" },
-        { transform: "translate(0,0)" },
-      ],
-      { duration: 240 },
-    );
-    burst(hit.x, hit.y, "#ffffff", 10);
-  }, IMPACT);
+  const crack = document.createElement("div");
+  crack.className = "fx-crack";
+  crack.style.left = hit.x - r.x - 55 + "px";
+  crack.style.top = hit.y - r.y - 55 + "px";
+  crack.style.opacity = "0";
+  el.appendChild(crack);
+  // each blow: squash, a jolt, sparks, and the cracks grow
+  HITS.forEach((t, n) => {
+    setTimeout(() => {
+      Sfx.smash(n);
+      el.animate(
+        [
+          { transform: "translateZ(0) scale(1, 1)" },
+          { transform: `translateZ(0) scale(${1.04 + n * 0.02}, ${0.9 - n * 0.03})` },
+          { transform: "translateZ(0) scale(0.98, 1.02)" },
+          { transform: "translateZ(0) scale(1, 1)" },
+        ],
+        { duration: 190, easing: "ease-out" },
+      );
+      crack.style.opacity = "1";
+      crack.style.transform = `scale(${[0.5, 0.8, 1.1][n]}) rotate(${n * 25}deg)`;
+      const flash = document.createElement("div");
+      flash.className = "fx-flash";
+      flash.style.left = hit.x - 40 + "px";
+      flash.style.top = hit.y - 40 + "px";
+      boardEl.appendChild(flash);
+      setTimeout(() => flash.remove(), 420);
+      boardEl.animate(
+        [{ transform: "translate(0,0)" }, { transform: `translate(${-3 - n}px,${2 + n}px)` }, { transform: `translate(${3 + n}px,${-2 - n}px)` }, { transform: "translate(0,0)" }],
+        { duration: 200 },
+      );
+      burst(hit.x, hit.y, n < 2 ? "#ffffff" : "#efe6d2", 6 + n * 5);
+    }, t);
+  });
 
-  // break: the block splits into wedges along the cracks, which tumble away and fall
+  // the last blow breaks it into wedges along the cracks, which tumble away and fall
+  const IMPACT = HITS[2];
   setTimeout(() => {
     Sfx.crack();
     const px = hit.x - r.x;
     const py = hit.y - r.y;
     const W = r.w;
     const H = r.h + 10;
-    // points around the block's outline, a little jittered, fanning out from the hit
     const N = 9;
+    const TAU = Math.PI * 2;
+    const norm = (a) => ((a % TAU) + TAU) % TAU;
     const rim = [];
     for (let i = 0; i < N; i++) {
-      const a = ((i + (Math.random() - 0.5) * 0.5) / N) * Math.PI * 2;
+      const a = ((i + (Math.random() - 0.5) * 0.5) / N) * TAU;
       const dx = Math.cos(a);
       const dy = Math.sin(a);
       const t = Math.min(dx > 0 ? (W + 6 - px) / dx : dx < 0 ? (-6 - px) / dx : 1e9, dy > 0 ? (H + 6 - py) / dy : dy < 0 ? (-6 - py) / dy : 1e9);
       rim.push([px + dx * t, py + dy * t, a]);
     }
-    const pieces = [];
     for (let i = 0; i < N; i++) {
       const p1 = rim[i];
       const p2 = rim[(i + 1) % N];
-      // corners of the box between two rim points belong to this wedge too
+      const span = norm(p2[2] - p1[2]);
       const pts = [[px, py], [p1[0], p1[1]]];
-      const corners = [[-6, -6], [W + 6, -6], [W + 6, H + 6], [-6, H + 6]]
-        .map((c) => [c[0], c[1], Math.atan2(c[1] - py, c[0] - px)])
-        .map((c) => [c[0], c[1], ((c[2] - p1[2]) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI)])
-        .filter((c) => c[2] < ((((p2[2] - p1[2]) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)))
-        .sort((a, b) => a[2] - b[2]);
-      corners.forEach((c) => pts.push([c[0], c[1]]));
+      [[-6, -6], [W + 6, -6], [W + 6, H + 6], [-6, H + 6]]
+        .map((c) => [c[0], c[1], norm(Math.atan2(c[1] - py, c[0] - px) - p1[2])])
+        .filter((c) => c[2] < span)
+        .sort((a, b) => a[2] - b[2])
+        .forEach((c) => pts.push([c[0], c[1]]));
       pts.push([p2[0], p2[1]]);
-      const mid = (p1[2] + ((((p2[2] - p1[2]) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) / 2);
-      pieces.push({ pts, ang: mid });
-    }
-    pieces.forEach(({ pts, ang }) => {
+      const ang = p1[2] + span / 2;
       const frag = document.createElement("div");
       frag.className = "fx-frag";
       frag.style.left = r.x + "px";
@@ -207,53 +239,48 @@ function hammerFX(b, done) {
         { duration: 900 + Math.random() * 200, easing: "cubic-bezier(.25,.55,.55,1)", fill: "forwards" },
       );
       setTimeout(() => frag.remove(), 1150);
-    });
+    }
     el.style.transition = "none";
     el.style.opacity = "0"; // (not visibility: the pieces borrow this block's clip shapes)
-    burst(hit.x, hit.y, "#efe6d2", 16); // dust
-  }, IMPACT + 170);
+    burst(hit.x, hit.y, "#efe6d2", 16);
+  }, IMPACT + 90);
 
   setTimeout(() => {
     h.remove();
+    shadow.remove();
     el.remove();
     fxBusy--;
     done && done();
-  }, IMPACT + 170 + 1050);
+  }, IMPACT + 90 + 1080);
 }
 
 // ---------------------------------------------------------------- Vacuum
 function vacuumFX(group, done) {
   fxBusy++;
   const spot = fxSpot(group[0]);
-  // the nozzle is held at an angle, its opening just above the block and facing it, with the
-  // hose running up and away (to the right, or to the left near the right edge)
-  const bw = boardEl.clientWidth;
-  const side = spot.x > bw * 0.62 ? -1 : 1;
-  const TILT = 34 * side;
-  const mouth = { x: spot.x + 26 * side, y: spot.y - 34 }; // centre of the opening
-  // the 110x420 nozzle: its opening (55,387) is placed on the mouth point and the whole
-  // thing is tilted around it
-  const n = fxEl("fx-nozzle", FX_NOZZLE_SVG);
-  n.style.left = mouth.x - 55 + "px";
-  n.style.top = mouth.y - 387 + "px";
-  n.style.transformOrigin = "55px 387px";
-  const hoseDir = { x: Math.sin((TILT * Math.PI) / 180), y: -Math.cos((TILT * Math.PI) / 180) };
+  // the opening (80,34) of the 160x340 vacuum sits just below the tapped square; the body and
+  // handle run down toward you and off the bottom of the board
+  const mouth = { x: spot.x, y: spot.y + 30 };
+  const n = fxEl("fx-vacuum", FX_VACUUM_SVG);
+  n.style.left = mouth.x - 80 + "px";
+  n.style.top = mouth.y - 34 + "px";
+  n.style.transformOrigin = "80px 34px";
   n.animate(
     [
-      { transform: `translate(${hoseDir.x * 260}px, ${hoseDir.y * 260}px) rotate(${TILT}deg)`, opacity: 0 },
-      { transform: `translate(${-hoseDir.x * 8}px, ${-hoseDir.y * 8}px) rotate(${TILT}deg)`, opacity: 1, offset: 0.75 },
-      { transform: `translate(0,0) rotate(${TILT}deg)`, opacity: 1 },
+      { transform: "perspective(700px) translateY(380px) rotateX(-25deg) rotate(6deg)", opacity: 0 },
+      { transform: "perspective(700px) translateY(-6px) rotateX(-12deg) rotate(-2deg)", opacity: 1, offset: 0.75 },
+      { transform: "perspective(700px) translateY(0) rotateX(-10deg) rotate(0)", opacity: 1 },
     ],
-    { duration: 340, easing: "cubic-bezier(.2,.8,.3,1)", fill: "forwards" },
+    { duration: 380, easing: "cubic-bezier(.2,.8,.3,1)", fill: "forwards" },
   );
-  Sfx.suck();
+  setTimeout(() => Sfx.suck(), 200);
   // air and dust rushing into the opening
   const swirl = setInterval(() => {
     for (let i = 0; i < 4; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const d = 55 + Math.random() * 60;
+      const a = -Math.PI * (0.05 + Math.random() * 0.9); // from above the opening
+      const d = 50 + Math.random() * 60;
       const sx = mouth.x + Math.cos(a) * d;
-      const sy = mouth.y + Math.sin(a) * d * 0.8;
+      const sy = mouth.y + Math.sin(a) * d;
       const s = document.createElement("div");
       s.className = Math.random() < 0.35 ? "fx-dust" : "fx-air";
       s.style.left = sx + "px";
@@ -263,91 +290,92 @@ function vacuumFX(group, done) {
       s.animate(
         [
           { transform: `rotate(${ang}rad) translateX(0) scaleX(0.4)`, opacity: 0 },
-          { transform: `rotate(${ang + 0.35}rad) translateX(${d * 0.55}px) scaleX(1)`, opacity: 0.95, offset: 0.5 },
-          { transform: `rotate(${ang + 0.6}rad) translateX(${d}px) scaleX(0.2)`, opacity: 0 },
+          { transform: `rotate(${ang + 0.3}rad) translateX(${d * 0.55}px) scaleX(1)`, opacity: 0.95, offset: 0.5 },
+          { transform: `rotate(${ang + 0.5}rad) translateX(${d}px) scaleX(0.2)`, opacity: 0 },
         ],
         { duration: 380, easing: "ease-in", fill: "forwards" },
       );
       setTimeout(() => s.remove(), 400);
     }
   }, 60);
-  // the nozzle hums while it pulls
-  const hum = n.animate(
-    [
-      { transform: `translate(0,0) rotate(${TILT}deg)` },
-      { transform: `translate(-1px,1px) rotate(${TILT - 0.6}deg)` },
-      { transform: `translate(1px,0) rotate(${TILT + 0.6}deg)` },
-      { transform: `translate(0,0) rotate(${TILT}deg)` },
-    ],
-    { duration: 90, iterations: Infinity, delay: 340, fill: "forwards" },
-  );
-  const START = 340;
-  const EACH = 260;
-  const SLURP = 760;
+  // the vacuum wiggles while it works
+  let hum = null;
+  setTimeout(() => {
+    hum = n.animate(
+      [
+        { transform: "perspective(700px) rotateX(-10deg) rotate(0) scale(1)" },
+        { transform: "perspective(700px) rotateX(-10deg) rotate(-1.5deg) scale(1.02, 0.98)" },
+        { transform: "perspective(700px) rotateX(-10deg) rotate(1.5deg) scale(0.98, 1.02)" },
+        { transform: "perspective(700px) rotateX(-10deg) rotate(0) scale(1)" },
+      ],
+      { duration: 160, iterations: Infinity },
+    );
+  }, 380);
+  const bits = n.querySelector(".vac-bits");
+  const START = 420;
+  const EACH = 280;
+  const SLURP = 780;
   group.forEach((b, i) => {
     const el = b.el;
     const r = fxRect(b);
     setTimeout(() => {
       el.style.transition = "none";
       el.style.animation = "none";
-      boardEl.appendChild(el); // out of the board's clipping, above the nozzle
+      boardEl.appendChild(el); // out of the board's clipping, above the vacuum
       el.style.zIndex = "33";
-      // everything scales toward the opening, so the block is drawn into it
       el.style.transformOrigin = mouth.x - r.x + "px " + (mouth.y - r.y) + "px";
-      const far = Math.hypot(r.cx - mouth.x, r.cy - mouth.y) > 30;
       el.animate(
         [
           { transform: "translateZ(0) rotate(0) scale(1,1)", opacity: 1, offset: 0 },
           { transform: "translateZ(0) rotate(-2deg) scale(1.02,0.98)", opacity: 1, offset: 0.08 },
           { transform: "translateZ(0) rotate(2deg) scale(0.98,1.02)", opacity: 1, offset: 0.16 },
           { transform: "translateZ(0) rotate(-2deg) scale(1.04,1.04)", opacity: 1, offset: 0.26 },
-          { transform: `translateZ(0) rotate(${far ? 6 : 3}deg) scale(0.86,1.18)`, opacity: 1, offset: 0.48 },
-          { transform: `translateZ(0) rotate(${far ? -10 : -6}deg) scale(0.42,0.85)`, opacity: 1, offset: 0.74 },
-          { transform: "translateZ(0) rotate(12deg) scale(0.04,0.12)", opacity: 0, offset: 1 },
+          { transform: "translateZ(0) rotate(5deg) scale(0.86,1.16)", opacity: 1, offset: 0.48 },
+          { transform: "translateZ(0) rotate(-8deg) scale(0.45,0.8)", opacity: 1, offset: 0.74 },
+          { transform: "translateZ(0) rotate(14deg) scale(0.04,0.1)", opacity: 0, offset: 1 },
         ],
         { duration: SLURP, easing: "cubic-bezier(.5,0,.9,.6)", fill: "forwards" },
       );
       setTimeout(() => {
         Sfx.pop();
         el.remove();
-        // a lump in the block's colour runs up the hose
-        const lump = document.createElement("div");
-        lump.className = "fx-lump";
-        lump.style.setProperty("--c", b.color);
-        const ls = mouth.x + hoseDir.x * 80;
-        const lt = mouth.y + hoseDir.y * 80;
-        lump.style.left = ls - 19 + "px";
-        lump.style.top = lt - 15 + "px";
-        boardEl.appendChild(lump);
-        const go = (d) => `translate(${hoseDir.x * d}px, ${hoseDir.y * d}px) rotate(${TILT}deg)`;
-        lump.animate(
-          [
-            { transform: go(0) + " scale(0.6)", opacity: 0 },
-            { transform: go(20) + " scale(1)", opacity: 1, offset: 0.2 },
-            { transform: go(300) + " scale(0.9)", opacity: 1, offset: 0.95 },
-            { transform: go(320) + " scale(0.9)", opacity: 0 },
-          ],
-          { duration: 520, easing: "ease-in", fill: "forwards" },
-        );
-        setTimeout(() => lump.remove(), 540);
+        // it lands in the see-through canister
+        if (bits) {
+          const NS = "http://www.w3.org/2000/svg";
+          for (let k = 0; k < 3; k++) {
+            const c = document.createElementNS(NS, "rect");
+            const w = 14 + Math.random() * 8;
+            c.setAttribute("x", 48 + Math.random() * 50);
+            c.setAttribute("y", 184 - i * 7 - Math.random() * 10);
+            c.setAttribute("width", w);
+            c.setAttribute("height", w * 0.8);
+            c.setAttribute("rx", 4);
+            c.setAttribute("fill", b.color);
+            c.setAttribute("stroke", "rgba(0,0,0,0.25)");
+            c.setAttribute("transform", `rotate(${(Math.random() - 0.5) * 50} 80 176)`);
+            c.style.animation = "fx-bit-in 0.3s ease-out";
+            bits.appendChild(c);
+          }
+        }
+        n.animate([{ transform: "perspective(700px) rotateX(-10deg) scale(1.06, 0.95)" }, { transform: "perspective(700px) rotateX(-10deg) scale(1)" }], { duration: 160 });
       }, SLURP);
     }, START + i * EACH);
   });
   const end = START + (group.length - 1) * EACH + SLURP;
   setTimeout(() => clearInterval(swirl), end - 100);
   setTimeout(() => {
-    hum.cancel();
+    if (hum) hum.cancel();
     n.animate(
       [
-        { transform: `translate(0,0) rotate(${TILT}deg)`, opacity: 1 },
-        { transform: `translate(${hoseDir.x * 280}px, ${hoseDir.y * 280}px) rotate(${TILT}deg)`, opacity: 0 },
+        { transform: "perspective(700px) translateY(0) rotateX(-10deg)", opacity: 1 },
+        { transform: "perspective(700px) translateY(360px) rotateX(-25deg)", opacity: 0 },
       ],
-      { duration: 300, easing: "ease-in", fill: "forwards" },
+      { duration: 380, easing: "ease-in", fill: "forwards" },
     );
-  }, end + 380);
+  }, end + 450);
   setTimeout(() => {
     n.remove();
     fxBusy--;
     done && done();
-  }, end + 700);
+  }, end + 850);
 }

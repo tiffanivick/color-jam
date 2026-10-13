@@ -122,7 +122,7 @@ const POWER_TEXT = {
   undo: "Take back your last move",
   hammer: "Smash any one block off the board",
   freeze: "Stops the clock for 10 seconds",
-  vacuum: "Sucks up a block and everything touching it",
+  vacuum: "Sucks up every block of the colour you tap",
 };
 
 // ---------------------------------------------------------------- theme + background
@@ -1143,7 +1143,11 @@ function blast(b) {
   if (mode === "vacuum") {
     usePower("vacuum");
     S.stats.vacuumed++;
-    const group = [b, ...blocks.filter((o) => o !== b && !o.removed && touching(o, b))];
+    // every block the same colour as the one you tapped, nearest first
+    const mid = (o) => o.cells.reduce((a, [r, c]) => [a[0] + r / o.cells.length, a[1] + c / o.cells.length], [0, 0]);
+    const m0 = mid(b);
+    const dist = (o) => Math.hypot(mid(o)[0] - m0[0], mid(o)[1] - m0[1]);
+    const group = [b, ...blocks.filter((o) => o !== b && !o.removed && o.color === b.color).sort((x, y) => dist(x) - dist(y))];
     // gone from the puzzle straight away; the animation just shows them being sucked up
     group.forEach((o) => {
       o.removed = true;

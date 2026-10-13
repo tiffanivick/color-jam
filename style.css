@@ -1193,3 +1193,8 @@ body.skin-real[data-world="star"] .block-group:not(.gray, .crate, .frozen, .thaw
 .fx-lump { position: absolute; width: 30px; height: 38px; border-radius: 50%; pointer-events: none; z-index: 32;
   background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--c) 60%, #fff), var(--c) 55%, color-mix(in srgb, var(--c) 60%, #1a0f3a));
   box-shadow: 0 0 0 3px rgba(60, 35, 140, 0.5); }
+.fx-vacuum { width: 160px; height: 340px; filter: drop-shadow(0 10px 8px rgba(10, 6, 40, 0.45)); z-index: 34 !important; }
+.fx-hshadow { position: absolute; width: 92px; height: 28px; border-radius: 50%; pointer-events: none; z-index: 26;
+  background: radial-gradient(closest-side, rgba(10, 6, 40, 0.55), rgba(10, 6, 40, 0)); opacity: 0; }
+.fx-crack { transition: transform 0.12s ease-out, opacity 0.08s; }
+@keyframes fx-bit-in { from { transform: translateY(-30px); opacity: 0; } }
