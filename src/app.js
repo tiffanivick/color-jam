@@ -793,6 +793,15 @@ function startTimer() {
   timerStarted = true;
   lastTick = performance.now();
   tickHandle = requestAnimationFrame(tick);
+  updateBoosters();
+}
+// tapping a power-up before the first move just explains why it's locked
+function lockedUntilStart(btn) {
+  if (timerStarted) return false;
+  shake($(btn));
+  Sfx.error();
+  toast("Make your first move to unlock power-ups");
+  return true;
 }
 function tick(now) {
   tickHandle = 0;
@@ -1015,7 +1024,8 @@ const BOOSTERS = [
 ];
 function updateBoosters() {
   const live = blocks.some((b) => isNeeded(b) && !b.removed);
-  const can = live && !levelOver;
+  // power-ups unlock once the clock is running (your first move starts it)
+  const can = live && !levelOver && timerStarted;
   const usable = {
     undo: can && undoStack.length > 0,
     hammer: can,
@@ -1057,6 +1067,7 @@ function setTool(mode) {
 }
 $("boosterUndo").addEventListener("click", () => {
   if (levelOver) return;
+  if (lockedUntilStart("boosterUndo")) return;
   if (S.inv.undo <= 0) return buyPrompt("undo");
   if (!undoStack.length) return shake($("boosterUndo"));
   const u = undoStack.pop();
@@ -1080,16 +1091,19 @@ $("boosterUndo").addEventListener("click", () => {
 });
 $("boosterHammer").addEventListener("click", () => {
   if (levelOver) return;
+  if (lockedUntilStart("boosterHammer")) return;
   if (S.inv.hammer <= 0) return buyPrompt("hammer");
   setTool(toolMode === "hammer" ? null : "hammer");
 });
 $("boosterVac").addEventListener("click", () => {
   if (levelOver) return;
+  if (lockedUntilStart("boosterVac")) return;
   if (S.inv.vacuum <= 0) return buyPrompt("vacuum");
   setTool(toolMode === "vacuum" ? null : "vacuum");
 });
 $("boosterFreeze").addEventListener("click", () => {
   if (levelOver) return;
+  if (lockedUntilStart("boosterFreeze")) return;
   if (S.inv.freeze <= 0) return buyPrompt("freeze");
   if (!timerStarted || performance.now() < freezeUntil) return shake($("boosterFreeze"));
   usePower("freeze");
