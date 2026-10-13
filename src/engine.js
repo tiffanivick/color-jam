@@ -165,6 +165,12 @@ function renderBlock(b) {
     cellEl.style.borderTopRightRadius = !hasUp && !hasRight ? "8px" : "0";
     cellEl.style.borderBottomLeftRadius = !hasDown && !hasLeft ? "8px" : "0";
     cellEl.style.borderBottomRightRadius = !hasDown && !hasRight ? "8px" : "0";
+    if (!hasDown) {
+      // the block's front wall (shown by the realistic style)
+      const side = document.createElement("i");
+      side.className = "side" + (hasLeft ? "" : " sl") + (hasRight ? "" : " sr");
+      cellEl.appendChild(side);
+    }
     wrapper.appendChild(cellEl);
   });
 
@@ -807,6 +813,23 @@ function findExit(movingBlock, next, dir) {
   });
 }
 
+function exitPathClear(movingBlock, cells, vec) {
+  const inside = (r, c) => r >= 0 && r < ROWS && c >= 0 && c < COLS;
+  const taken = (r, c) =>
+    boardWalls.some(([wr, wc]) => wr === r && wc === c) ||
+    blocks.some((o) => o !== movingBlock && !o.removed && o.cells.some(([orr, oc]) => orr === r && oc === c));
+  for (const [r0, c0] of cells) {
+    let r = r0 + vec[0];
+    let c = c0 + vec[1];
+    while (inside(r, c)) {
+      if (taken(r, c)) return false;
+      r += vec[0];
+      c += vec[1];
+    }
+  }
+  return true;
+}
+
 function tryStep(movingBlock, cells, dir) {
   const vec = DIRS[dir];
   const next = cells.map(([r, c]) => [r + vec[0], c + vec[1]]);
@@ -816,9 +839,9 @@ function tryStep(movingBlock, cells, dir) {
   );
 
   if (leavesBoard) {
-    return findExit(movingBlock, next, dir)
-      ? { status: "exit" }
-      : { status: "blocked" };
+    if (!findExit(movingBlock, next, dir)) return { status: "blocked" };
+    // the whole block has to slide out: every square needs a clear run to the edge
+    return exitPathClear(movingBlock, cells, vec) ? { status: "exit" } : { status: "blocked" };
   }
 
   const occupied = blocks.some(
