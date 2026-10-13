@@ -199,12 +199,12 @@ function renderBlock(b) {
   if (b.crate) wrapper.classList.add("crate");
   if (b.axis) wrapper.classList.add("dir-" + b.axis);
   if (b.bomb) {
-    b.bombLeft = b.bomb;
+    b.bombLeft = bombSeconds(b.bomb);
     wrapper.classList.add("bomb");
-    if (b.bombLeft <= 2) wrapper.classList.add("hot");
+    if (b.bombLeft <= BOMB_HOT) wrapper.classList.add("hot");
     const bd = document.createElement("div");
     bd.className = "bomb-badge";
-    bd.textContent = b.bombLeft;
+    bd.textContent = Math.ceil(b.bombLeft);
     const f0 = b.cells.reduce((a, c) => (c[0] > a[0] || (c[0] === a[0] && c[1] > a[1]) ? c : a)); // last cell
     bd.style.left = (f0[1] - c0) * STEP + CELL / 2 - 14 + "px";
     bd.style.top = (f0[0] - r0) * STEP + CELL / 2 - 14 + "px";
@@ -577,11 +577,22 @@ function afterMove() {
     if (b.pbadge) b.pbadge.textContent = b.pillarLeft;
     if (b.pillarLeft <= 0) crumble(b);
   });
+}
+// ---------- bombs: a fuse that burns while the level clock runs ----------
+const BOMB_SECONDS_PER_MOVE = 7.5;
+const BOMB_HOT = 10; // seconds left when it starts to glow and throb
+function bombSeconds(n) {
+  return Math.max(20, Math.round((n * BOMB_SECONDS_PER_MOVE) / 5) * 5);
+}
+// called by the level clock with the seconds that just passed (not while paused or frozen)
+function burnFuses(dt) {
   blocks.forEach((b) => {
     if (!b.bomb || b.removed) return;
-    b.bombLeft = Math.max(0, b.bombLeft - 1);
-    if (b.badge) b.badge.textContent = b.bombLeft;
-    if (b.el) b.el.classList.toggle("hot", b.bombLeft <= 2);
+    const before = Math.ceil(b.bombLeft);
+    b.bombLeft = Math.max(0, b.bombLeft - dt);
+    const now = Math.ceil(b.bombLeft);
+    if (now !== before && b.badge) b.badge.textContent = now;
+    if (b.el) b.el.classList.toggle("hot", b.bombLeft <= BOMB_HOT);
     if (b.bombLeft <= 0) hooks.boom(b);
   });
 }

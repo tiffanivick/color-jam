@@ -804,6 +804,8 @@ function tick(now) {
   if (!paused) {
     const before = Math.ceil(timeLeft);
     timeLeft = Math.max(0, timeLeft - dt);
+    burnFuses(dt);
+    if (levelOver) return; // a bomb went off
     if (timeLeft <= 5 && Math.ceil(timeLeft) !== before && timeLeft > 0) Sfx.tap();
   }
   renderTimer(frozen);
@@ -933,7 +935,7 @@ const KIND_TIPS = [
   ["crate", (L) => L.blocks.some((b) => b.crate), "Wooden crate: tap it twice to smash it for a prize.", 17],
   ["gray", (L) => L.blocks.some((b) => b.gray), "Gray blocks have no gate. Just shove them out of the way.", 20],
   ["chain", (L) => L.blocks.some((b) => b.lockBy != null), "Chained! The coloured ring on the padlock shows which block holds the key.", 30],
-  ["bomb", (L) => L.blocks.some((b) => b.bomb), "Bomb! The number is how many moves you have before it blows.", 33],
+  ["bomb", (L) => L.blocks.some((b) => b.bomb), "Bomb! Clear it before its fuse burns down. It counts down while the clock runs.", 33],
 ];
 let tipTimer = 0;
 function showTip(idx) {
@@ -1073,14 +1075,6 @@ $("boosterUndo").addEventListener("click", () => {
     }
   });
   moves = Math.max(0, moves - 1);
-  // a bomb gets the move back too
-  blocks.forEach((b) => {
-    if (b.bomb && !b.removed) {
-      b.bombLeft = Math.min(b.bomb, b.bombLeft + 1);
-      b.badge.textContent = b.bombLeft;
-      b.el.classList.toggle("hot", b.bombLeft <= 2);
-    }
-  });
   updateHUD();
   updateBoosters();
 });
