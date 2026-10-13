@@ -139,6 +139,11 @@ function renderBlock(b) {
   wrapper.style.height = (r1 - r0 + 1) * CELL + (r1 - r0) * GAP + "px";
   // for the realistic skin: block colour and size, so lighting can run across the whole block
   wrapper.style.setProperty("--bc", b.color);
+  // Realistic style: the whole block as one molded shape (see brick.js)
+  wrapper.insertAdjacentHTML(
+    "afterbegin",
+    brickSVG(b, c0, r0, (c1 - c0 + 1) * CELL + (c1 - c0) * GAP, (r1 - r0 + 1) * CELL + (r1 - r0) * GAP),
+  );
   wrapper.style.setProperty("--gw", wrapper.style.width);
   wrapper.style.setProperty("--gh", wrapper.style.height);
 

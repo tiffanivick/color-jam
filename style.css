@@ -977,44 +977,6 @@ html.vp-short .tab { padding-bottom: 3px; }
 .lip-joint { position: absolute; pointer-events: none; }
 .frozen .lip-joint, .thaw .lip-joint { display: none; }
 
-
-/* ================= realistic block skin (Shop > Block style) =================
-   one light source across the whole block (not per square), bevelled outer edges,
-   cylinder studs, a deeper side and a soft contact shadow */
-.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) .block-cell {
-  --hl: 0 0 0 transparent; --hlx: 0 0 0 transparent; --hr: 0 0 0 transparent; --sh: 0 0 0 transparent;
-  background-image:
-    linear-gradient(115deg, transparent 16%, rgba(255,255,255,0.16) 21%, rgba(255,255,255,0.05) 27%, transparent 31%),
-    linear-gradient(160deg, rgba(255,255,255,0.34) 0%, rgba(255,255,255,0.1) 30%, rgba(255,255,255,0) 52%, rgba(0,0,0,0.14) 100%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='80' height='80' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: var(--gw) var(--gh), var(--gw) var(--gh), 80px 80px;
-  background-position: calc(-1 * var(--ox)) calc(-1 * var(--oy)), calc(-1 * var(--ox)) calc(-1 * var(--oy)), calc(-1 * var(--ox)) calc(-1 * var(--oy));
-  background-repeat: no-repeat, no-repeat, repeat;
-  box-shadow: var(--hl), var(--hlx), var(--hr), var(--sh) !important;
-}
-.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) .block-cell.e-t { --hl: inset 0 2px 0 rgba(255,255,255,0.5); }
-.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) .block-cell.e-l { --hlx: inset 2px 0 0 rgba(255,255,255,0.28); }
-.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) .block-cell.base {
-  --sh: inset 0 -2px 0 rgba(0,0,0,0.12),
-    0 6px 0 color-mix(in srgb, var(--bc) 50%, #1a0f3a),
-    0 7px 0 rgba(10,6,40,0.3);
-}
-.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) .block-cell.e-r { --hr: inset -2px 0 0 rgba(0,0,0,0.1); }
-.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) .lip-joint { background: color-mix(in srgb, var(--bc) 50%, #1a0f3a) !important; }
-
-/* studs: a short glossy cylinder */
-.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray):not(.dir-h):not(.dir-v) .block-cell::after {
-  left: 11px; top: 10px; width: 26px; height: 26px;
-  background:
-    radial-gradient(circle at 34% 28%, rgba(255,255,255,0.75) 0, rgba(255,255,255,0.2) 22%, rgba(255,255,255,0) 46%),
-    radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.12) 100%),
-    var(--bc);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.55),
-    0 3px 0 color-mix(in srgb, var(--bc) 62%, #1a0f3a),
-    0 5px 4px rgba(10,6,40,0.38);
-}
-
 /* shop swatch for the style row */
 .skin-swatch { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border-radius: 12px; background: #4d7bff; box-shadow: 0 4px 0 #2b4bb0; }
 .skin-swatch i { width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, rgba(255,255,255,0.15) 60%); box-shadow: 0 2px 0 #2b4bb0; }
@@ -1105,61 +1067,7 @@ html.vp-short .tab { padding-bottom: 3px; }
 .rainbow .block-cell.base { box-shadow: 0 6px 0 #6b4aa8, 0 10px 10px -2px rgba(10,6,40,0.45) !important; }
 .rainbow .block-cell::after { background: radial-gradient(circle at 35% 30%, #fff, rgba(255,255,255,0.35) 55%, rgba(255,255,255,0.1)) !important; }
 .rainbow .lip-joint { background: #6b4aa8 !important; }
-
-
-/* =====================================================================
-   WORLD FINISHES (Realistic style): same colours, a different material per world
-   ===================================================================== */
-body.skin-real[data-world="meadow"] .block-group:not(.gray, .crate, .frozen, .thaw, .chained, .jelly, .comet, .bubble, .rainbow, .pillar) .block-cell::before { content: none; }
-
-/* Frostbite Peak: snow-capped tops, frosty studs */
-body.skin-real[data-world="frost"] .block-group:not(.gray, .crate, .frozen, .thaw, .chained, .jelly, .comet, .bubble, .rainbow, .pillar) .block-cell.e-t::before { content: ""; position: absolute; left: -1px; right: -1px; top: -3px; height: 15px; pointer-events: none;
-  border-radius: 8px 8px 0 0; background: linear-gradient(180deg, #ffffff, #e6f4ff);
-  -webkit-mask: radial-gradient(circle at 6px 8px, #000 4.6px, transparent 5px) 0 0 / 12px 15px repeat-x, linear-gradient(#000, #000) 0 0 / 100% 8px no-repeat;
-          mask: radial-gradient(circle at 6px 8px, #000 4.6px, transparent 5px) 0 0 / 12px 15px repeat-x, linear-gradient(#000, #000) 0 0 / 100% 8px no-repeat;
-  filter: drop-shadow(0 2px 1px rgba(40, 80, 140, 0.35)); }
-body.skin-real[data-world="frost"] .block-group:not(.gray, .crate, .frozen, .thaw, .chained, .jelly, .comet, .bubble, .rainbow, .pillar, .dir-h, .dir-v) .block-cell::after { background: radial-gradient(circle at 35% 28%, #ffffff 0, rgba(255,255,255,0.75) 25%, rgba(220,240,255,0.25) 55%, rgba(255,255,255,0) 80%), var(--bc) !important; }
-
-/* Candy Cove: sugar-sparkled candy with gumdrop studs */
-body.skin-real[data-world="candy"] .block-group:not(.gray, .crate, .frozen, .thaw, .chained, .jelly, .comet, .bubble, .rainbow, .pillar) .block-cell::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0.4;
-  background: radial-gradient(circle, rgba(255,255,255,0.9) 0 0.9px, transparent 1.3px) 0 0 / 9px 9px, radial-gradient(circle, rgba(255,255,255,0.6) 0 0.8px, transparent 1.2px) 4px 5px / 11px 11px; }
-body.skin-real[data-world="candy"] .block-group:not(.gray, .crate, .frozen, .thaw, .chained, .jelly, .comet, .bubble, .rainbow, .pillar, .dir-h, .dir-v) .block-cell::after { border-radius: 50% 50% 46% 46% / 60% 60% 40% 40% !important;
-  background: radial-gradient(circle at 36% 26%, #ffffff 0, rgba(255,255,255,0.6) 18%, rgba(255,255,255,0) 45%), radial-gradient(circle, rgba(255,255,255,0.8) 0 0.8px, transparent 1.2px) 0 0 / 5px 5px, var(--bc) !important; }
-
-/* Ember: volcanic rock with glowing cracks and coal studs */
-body.skin-real[data-world="ember"] .block-group:not(.gray, .crate, .frozen, .thaw, .chained, .jelly, .comet, .bubble, .rainbow, .pillar) .block-cell::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0.85;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 54 54'%3E%3Cpath d='M0 40l9-4 5 5 8-3M34 0l-3 8 6 6-2 7M54 30l-8 1-4 6' fill='none' stroke='%23ffb347' stroke-width='1.6' stroke-linecap='round' opacity='0.9'/%3E%3C/svg%3E") 0 0 / 54px 54px,
-              linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0) 40%, rgba(255,120,40,0.18)); }
-body.skin-real[data-world="ember"] .block-group:not(.gray, .crate, .frozen, .thaw, .chained, .jelly, .comet, .bubble, .rainbow, .pillar, .dir-h, .dir-v) .block-cell::after { background: radial-gradient(circle at 50% 50%, #fff2b0 0, #ffb347 22%, color-mix(in srgb, var(--bc) 70%, #1a0a10) 58%) !important;
-  box-shadow: 0 0 9px 2px rgba(255, 150, 60, 0.55), 0 3px 0 color-mix(in srgb, var(--bc) 50%, #1a0a10) !important; }
-
-/* Star: brushed metal with rivets and glowing light studs */
-body.skin-real[data-world="star"] .block-group:not(.gray, .crate, .frozen, .thaw, .chained, .jelly, .comet, .bubble, .rainbow, .pillar) .block-cell::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  background: radial-gradient(circle at 5px 5px, rgba(255,255,255,0.7) 0 1.6px, rgba(0,0,0,0.3) 2px, transparent 2.6px),
-              radial-gradient(circle at calc(100% - 5px) 5px, rgba(255,255,255,0.7) 0 1.6px, rgba(0,0,0,0.3) 2px, transparent 2.6px),
-              repeating-linear-gradient(180deg, rgba(255,255,255,0.07) 0 1px, rgba(0,0,0,0.05) 1px 3px); }
-body.skin-real[data-world="star"] .block-group:not(.gray, .crate, .frozen, .thaw, .chained, .jelly, .comet, .bubble, .rainbow, .pillar, .dir-h, .dir-v) .block-cell::after { background: radial-gradient(circle at 50% 50%, #ffffff 0, #ffffff 18%, color-mix(in srgb, var(--bc) 40%, #ffffff) 38%, var(--bc) 70%) !important;
-  box-shadow: 0 0 10px 3px color-mix(in srgb, var(--bc) 70%, #ffffff), inset 0 0 0 2px rgba(255,255,255,0.4) !important; }
-
-/* Coral Reef: shimmering water light and pearl studs */
-body.skin-real[data-world="reef"] .block-group:not(.gray, .crate, .frozen, .thaw, .chained, .jelly, .comet, .bubble, .rainbow, .pillar) .block-cell::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0.5;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 60'%3E%3Cpath d='M0 12c10-6 20 6 30 0s20 6 30 0M0 34c10-6 20 6 30 0s20 6 30 0M0 56c10-6 20 6 30 0s20 6 30 0' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E") 0 0 / 60px 60px;
-  animation: caustic 6s linear infinite; }
 @keyframes caustic { to { background-position: 60px 0; } }
-body.skin-real[data-world="reef"] .block-group:not(.gray, .crate, .frozen, .thaw, .chained, .jelly, .comet, .bubble, .rainbow, .pillar, .dir-h, .dir-v) .block-cell::after { background: radial-gradient(circle at 34% 28%, #ffffff 0, #fdf3ff 25%, #e8d8f2 55%, #c9b6dd 80%) !important;
-  box-shadow: inset -2px -3px 4px rgba(150, 110, 190, 0.35), 0 3px 0 color-mix(in srgb, var(--bc) 50%, #1a0f3a), 0 5px 4px rgba(10,6,40,0.3) !important; }
-
-/* Golden Dunes: layered sandstone and gold-coin studs */
-body.skin-real[data-world="dunes"] .block-group:not(.gray, .crate, .frozen, .thaw, .chained, .jelly, .comet, .bubble, .rainbow, .pillar) .block-cell::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0.55;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 20'%3E%3Cpath d='M0 6c15 4 30-4 60 0M0 15c20 3 35-4 60 0' fill='none' stroke='%23fff3d6' stroke-width='1.6' opacity='0.8'/%3E%3C/svg%3E") 0 0 / 60px 20px; }
-body.skin-real[data-world="dunes"] .block-group:not(.gray, .crate, .frozen, .thaw, .chained, .jelly, .comet, .bubble, .rainbow, .pillar, .dir-h, .dir-v) .block-cell::after { background: radial-gradient(circle at 36% 30%, #fff7cf 0, #ffd447 30%, #e2a514 62%, #b97d0a 100%) !important;
-  box-shadow: inset 0 0 0 2px rgba(150, 95, 0, 0.45), inset 0 0 0 4px rgba(255, 240, 180, 0.5), 0 3px 0 #8f5f08, 0 5px 4px rgba(10,6,40,0.3) !important; }
-
-/* Sunset Skies: soft sunset glow and twinkling studs */
-body.skin-real[data-world="dusk"] .block-group:not(.gray, .crate, .frozen, .thaw, .chained, .jelly, .comet, .bubble, .rainbow, .pillar) .block-cell::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  background: linear-gradient(180deg, rgba(255, 200, 150, 0.22), rgba(255, 120, 160, 0) 55%, rgba(80, 40, 140, 0.18)); }
-body.skin-real[data-world="dusk"] .block-group:not(.gray, .crate, .frozen, .thaw, .chained, .jelly, .comet, .bubble, .rainbow, .pillar, .dir-h, .dir-v) .block-cell::after { background: radial-gradient(circle at 50% 50%, #ffffff 0, #fff4e6 22%, color-mix(in srgb, var(--bc) 55%, #ffd2e0) 55%, var(--bc) 80%) !important;
-  box-shadow: 0 0 8px 2px rgba(255, 220, 240, 0.55), 0 3px 0 color-mix(in srgb, var(--bc) 50%, #2a1040) !important; }
 /* jelly: lighter, glassier, a touch see-through so it reads as gummy candy */
 .jelly .block-cell { filter: saturate(1.2) brightness(1.08); opacity: 0.9; }
 .jelly:not(.frozen, .thaw, .chained) .block-cell::before { box-shadow: inset 0 0 0 3px rgba(255,255,255,0.4), inset 0 -8px 12px rgba(0,0,0,0.16), inset 0 6px 10px rgba(255,255,255,0.25) !important; }
@@ -1171,54 +1079,89 @@ body.skin-real[data-world="dusk"] .block-group:not(.gray, .crate, .frozen, .thaw
    REALISTIC v2: molded plastic with a real front wall, bevels and cylinder studs
    ===================================================================== */
 .block-cell > .side { display: none; }
-.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) .block-cell > .side {
-  display: block; position: absolute; left: 0; right: 0; top: 100%; height: 9px; pointer-events: none;
-  background: linear-gradient(180deg,
-    color-mix(in srgb, var(--bc) 82%, #1a0f3a) 0%,
-    color-mix(in srgb, var(--bc) 64%, #1a0f3a) 50%,
-    color-mix(in srgb, var(--bc) 48%, #120a30) 100%);
-  box-shadow: inset 0 -1px 0 rgba(10, 6, 40, 0.3);
-}
-.skin-real .block-group .block-cell > .side.sl { border-bottom-left-radius: 9px; }
-.skin-real .block-group .block-cell > .side.sr { border-bottom-right-radius: 9px; }
-/* the front wall replaces the old flat lip */
-.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) .block-cell.base {
-  --sh: inset 0 -3px 3px -2px color-mix(in srgb, var(--bc) 70%, #1a0f3a);
-}
-.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) .lip-joint {
-  height: 9px !important;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--bc) 78%, #1a0f3a), color-mix(in srgb, var(--bc) 46%, #120a30)) !important;
-}
-/* bevel: the top surface rounds over at its outer edges */
-.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) .block-cell.e-t { --hl: inset 0 2px 0 rgba(255, 255, 255, 0.55), inset 0 6px 6px -4px rgba(255, 255, 255, 0.35); }
-.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) .block-cell.e-l { --hlx: inset 2px 0 0 rgba(255, 255, 255, 0.3), inset 5px 0 6px -4px rgba(255, 255, 255, 0.22); }
-.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) .block-cell.e-r { --hr: inset -2px 0 0 rgba(10, 6, 40, 0.14), inset -5px 0 6px -4px rgba(10, 6, 40, 0.16); }
 /* softer, wider contact shadow so the brick sits on the tray */
 .skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) {
   filter: drop-shadow(0 4px 2px rgba(10, 6, 40, 0.35)) drop-shadow(0 12px 10px rgba(10, 6, 40, 0.28));
 }
-/* studs: a short cylinder with a lit rim, a shaded wall and a soft reflection */
-.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray):not(.dir-h):not(.dir-v) .block-cell::after {
-  left: 11px; top: 9px; width: 26px; height: 26px;
-  background:
-    radial-gradient(ellipse 46% 34% at 38% 30%, rgba(255, 255, 255, 0.85) 0, rgba(255, 255, 255, 0.25) 55%, rgba(255, 255, 255, 0) 100%),
-    radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0) 62%, rgba(10, 6, 40, 0.18) 74%, rgba(255, 255, 255, 0.28) 84%, rgba(0, 0, 0, 0) 92%),
-    linear-gradient(160deg, color-mix(in srgb, var(--bc) 80%, #ffffff), var(--bc) 55%, color-mix(in srgb, var(--bc) 85%, #1a0f3a));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 2px 0 color-mix(in srgb, var(--bc) 72%, #1a0f3a),
-    0 4px 0 color-mix(in srgb, var(--bc) 52%, #120a30),
-    0 6px 5px rgba(10, 6, 40, 0.35);
-}
-.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) .block-cell.base { border-bottom-left-radius: 0 !important; border-bottom-right-radius: 0 !important; }
-
-/* the front wall sits INSIDE the block's own squares (bottom 8px), so neighbouring
-   blocks never overlap and every block reads as the same height */
-.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) .block-cell > .side { top: auto; bottom: 0; height: 8px; }
-.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) .lip-joint { height: 8px !important; margin-top: -8px; }
-/* studs sit in the middle of the top face, which is 8px shorter on a front-row square */
-.skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray):not(.dir-h):not(.dir-v) .block-cell.base::after { top: 7px; }
 /* a tighter contact shadow that stays in the gap instead of falling on the next block */
 .skin-real .block-group:not(.frozen):not(.thaw):not(.crate):not(.gray) {
   filter: drop-shadow(0 2px 1.5px rgba(10, 6, 40, 0.4)) drop-shadow(0 5px 4px rgba(10, 6, 40, 0.22));
 }
+
+/* =====================================================================
+   REALISTIC v3: every block is ONE molded shape drawn by brick.js
+   (no per-square seams; rounded outline incl. inside bends; wall follows the outline)
+   ===================================================================== */
+.block-svg { display: none; position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
+.skin-real .block-svg { display: block; }
+.skin-real .block-group .block-cell { background: none !important; box-shadow: none !important; filter: none !important; opacity: 1 !important; animation: none !important; }
+.skin-real .block-group .block-cell::before, .skin-real .block-group .block-cell::after { display: none !important; }
+.skin-real .block-group .side, .skin-real .block-group .lip-joint { display: none !important; }
+.skin-real .block-group { filter: drop-shadow(0 2px 1.5px rgba(10, 6, 40, 0.4)) drop-shadow(0 5px 4px rgba(10, 6, 40, 0.22)) !important; }
+
+.block-svg .b-mat, .block-svg .b-fin, .block-svg .b-ice, .block-svg .b-icecrack, .block-svg .b-iceshine { fill: none; }
+.block-svg .b-snow { display: none; }
+.block-svg .stud-shadow { fill: rgba(10, 6, 40, 0.3); }
+.block-svg .stud-hl { fill: url(#bk-stud); }
+.block-svg .stud-rim { fill: none; stroke: rgba(255, 255, 255, 0.35); stroke-width: 1; }
+.block-svg .stud-star, .block-svg .stud-arrow-h, .block-svg .stud-arrow-v, .block-svg .stud-up { display: none; }
+.block-svg .stud-arrow-h, .block-svg .stud-arrow-v, .block-svg .stud-up { fill: none; stroke: #fff; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* arrow blocks: the stud is replaced by the arrow, embossed on the face */
+.dir-h .block-svg .stud > :not(.stud-arrow-h), .dir-v .block-svg .stud > :not(.stud-arrow-v) { display: none; }
+.dir-h .block-svg .stud-arrow-h, .dir-v .block-svg .stud-arrow-v { display: block; }
+/* gray: no gate, striped */
+.gray .block-svg .b-mat { fill: url(#mat-gray); }
+/* chained: dark stripes until its key block leaves */
+.chained .block-svg .b-mat, .unchain .block-svg .b-mat { fill: url(#mat-chain); }
+.unchain .block-svg .b-mat { animation: bk-fade 0.6s ease-out forwards; }
+@keyframes bk-fade { to { opacity: 0; } }
+/* ice: one clear sheet over the whole block, cracks run across it */
+.frozen .block-svg .b-ice, .thaw .block-svg .b-ice { fill: url(#mat-ice); }
+.frozen .block-svg .b-icecrack, .thaw .block-svg .b-icecrack { fill: url(#mat-icecrack); }
+.frozen .block-svg .b-iceshine, .thaw .block-svg .b-iceshine { fill: url(#mat-iceshine); }
+.frozen .block-svg .stud, .thaw .block-svg .stud { opacity: 0.35; }
+.frozen .block-svg .b-wall { fill: color-mix(in srgb, var(--bc) 30%, #6f9fd0) !important; }
+.thaw .block-svg .b-ice, .thaw .block-svg .b-icecrack, .thaw .block-svg .b-iceshine { animation: bk-fade 0.55s ease-out forwards; }
+/* crates: wooden planks, no studs */
+.crate .block-svg .b-face { fill: url(#mat-crate) !important; }
+.crate .block-svg .b-wall { fill: #6b4226 !important; }
+.crate .block-svg .stud { display: none; }
+.crate.cracked .block-svg .b-mat { fill: url(#mat-icecrack); opacity: 0.9; filter: invert(1); }
+/* sand pillar */
+.pillar .block-svg .b-face { fill: url(#mat-sand) !important; }
+.pillar .block-svg .b-wall { fill: #9c7442 !important; }
+.pillar .block-svg .stud { display: none; }
+/* rainbow */
+.rainbow .block-svg .b-face { fill: url(#mat-rainbow) !important; }
+.rainbow .block-svg .b-wall, .rainbow .block-svg .stud-side { fill: #6b4aa8 !important; }
+.rainbow .block-svg .stud-top { fill: #ffffff !important; opacity: 0.55; }
+/* jelly: glassy gummy that wobbles */
+.jelly .block-svg { opacity: 0.94; animation: jelly-wobble 1.8s ease-in-out infinite; transform-origin: 50% 100%; }
+.jelly .block-svg .b-mat { fill: url(#mat-jelly); }
+.jelly .block-svg .stud { transform-box: fill-box; }
+.jelly .block-svg .stud-top { opacity: 0.75; }
+/* comet: studs become stars, with a speed streak */
+.comet .block-svg .b-mat { fill: url(#mat-comet); }
+.comet .block-svg .stud > :not(.stud-star) { display: none; }
+.comet .block-svg .stud-star { display: block; fill: #fff3b0; stroke: #ffd447; stroke-width: 1; }
+/* bubble: floats up — studs show an up chevron */
+.bubble .block-svg { animation: bubble-bob 2.6s ease-in-out infinite; }
+.bubble .block-svg .stud-up { display: block; }
+
+/* world finishes (only on ordinary blocks) */
+body.skin-real[data-world="frost"] .block-group:not(.gray, .crate, .frozen, .thaw, .pillar, .rainbow, .jelly, .comet, .bubble) .b-snow { display: block; }
+body.skin-real[data-world="candy"] .block-group:not(.gray, .crate, .frozen, .thaw, .pillar, .rainbow) .b-fin { fill: url(#fin-candy); }
+body.skin-real[data-world="ember"] .block-group:not(.gray, .crate, .frozen, .thaw, .pillar, .rainbow) .b-fin { fill: url(#fin-ember); }
+body.skin-real[data-world="star"] .block-group:not(.gray, .crate, .frozen, .thaw, .pillar, .rainbow) .b-fin { fill: url(#fin-star); }
+body.skin-real[data-world="reef"] .block-group:not(.gray, .crate, .frozen, .thaw, .pillar, .rainbow) .b-fin { fill: url(#fin-reef); }
+body.skin-real[data-world="dunes"] .block-group:not(.gray, .crate, .frozen, .thaw, .pillar, .rainbow) .b-fin { fill: url(#fin-dunes); }
+body.skin-real[data-world="dusk"] .block-group:not(.gray, .crate, .frozen, .thaw, .pillar, .rainbow) .b-fin { fill: url(#fin-dusk); }
+/* world studs */
+body.skin-real[data-world="ember"] .block-group:not(.gray, .crate, .frozen, .thaw, .rainbow) .stud-hl { fill: url(#st-ember); }
+body.skin-real[data-world="ember"] .block-group:not(.gray, .crate, .frozen, .thaw, .rainbow) .stud-rim { stroke: #ffc46b; stroke-width: 1.6; opacity: 0.85; }
+body.skin-real[data-world="reef"] .block-group:not(.gray, .crate, .frozen, .thaw, .rainbow) .stud-top { fill: #f4ecfa !important; }
+body.skin-real[data-world="dunes"] .block-group:not(.gray, .crate, .frozen, .thaw, .rainbow) .stud-top { fill: #e8ae1c !important; }
+body.skin-real[data-world="dunes"] .block-group:not(.gray, .crate, .frozen, .thaw, .rainbow) .stud-side { fill: #9a6a08 !important; }
+body.skin-real[data-world="dunes"] .block-group:not(.gray, .crate, .frozen, .thaw, .rainbow) .stud-rim { stroke: #fff1b8; stroke-width: 1.6; }
+body.skin-real[data-world="star"] .block-group:not(.gray, .crate, .frozen, .thaw, .rainbow) .stud-top { fill: color-mix(in srgb, var(--bc) 35%, #ffffff) !important; }
