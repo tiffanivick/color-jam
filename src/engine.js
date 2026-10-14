@@ -335,8 +335,8 @@ function shiftCells(cells, dr, dc) {
 
 // Every square-aligned position (as a row/col offset from where the block started)
 // that the block can reach through empty space. A position where the block touches
-// a matching gate is flagged with the direction it exits in. The block goes
-// straight through, so it can't travel on from there.
+// a matching gate is flagged with the direction it exits in. It is still an ordinary square:
+// the block may stop there or carry on past; it only leaves when you push it into the gate.
 const onLava = (cells) => boardLava.length > 0 && cells.some(([r, c]) => boardLava.some(([lr, lc]) => lr === r && lc === c));
 
 function computeReachable(block) {
@@ -373,10 +373,7 @@ function computeReachable(block) {
   // jelly: one square per drag, and it can only leave from where it already is
   if (block.jelly) {
     const gate0 = dirs.find((dir) => tryStep(block, block.cells, dir).status === "exit");
-    if (gate0) {
-      start.exitDir = gate0;
-      return reach;
-    }
+    if (gate0) start.exitDir = gate0;
     for (const dir of dirs) {
       const t = tryStep(block, block.cells, dir);
       if (t.status !== "move") continue;
@@ -395,10 +392,7 @@ function computeReachable(block) {
     const gate = dirs.find(
       (dir) => tryStep(block, cells, dir).status === "exit",
     );
-    if (gate) {
-      s.exitDir = gate;
-      continue;
-    }
+    if (gate) s.exitDir = gate;
 
     for (const dir of dirs) {
       const nr = s.dr + DIRS[dir][0];
@@ -466,19 +460,31 @@ function dragTo(d, tx, ty) {
     if (Math.hypot(nx - x, ny - y) < 1e-4) break; // blocked
     x = nx;
     y = ny;
-
-    // locked onto a square that is a gate for this block?
-    const sx = snapAxis(x);
-    const sy = snapAxis(y);
-    for (const s of d.reach.values()) {
-      if (s.exitDir && s.dc === sx && s.dr === sy) {
-        d.pos = [x, y];
-        return s;
-      }
-    }
   }
   d.pos = [x, y];
-  return null;
+}
+
+// A block only goes into a gate when it is lined up with it exactly (locked onto the square in
+// front of it) and your finger pushes on past, into the gate. Returns that square, or null.
+// PUSH: how far past the square (in squares) your finger has to go.
+const PUSH = 0.4;
+function gatePush(d, push) {
+  const sx = snapAxis(d.pos[0]);
+  const sy = snapAxis(d.pos[1]);
+  if (!Number.isInteger(sx) || !Number.isInteger(sy)) return null;
+  const s = d.reach.get(stateKey(sy, sx));
+  if (!s || !s.exitDir) return null;
+  const [vr, vc] = DIRS[s.exitDir];
+  return (d.target[0] - s.dc) * vc + (d.target[1] - s.dr) * vr >= push ? s : null;
+}
+// light up the gate a lined-up block is being pushed toward
+function showGateReady(d) {
+  const s = gatePush(d, 0.12);
+  const ex = s && findExit(d.block, shiftCells(d.block.cells, s.dr + DIRS[s.exitDir][0], s.dc + DIRS[s.exitDir][1]), s.exitDir);
+  const el = ex ? ex.el : null;
+  if (d.readyEl && d.readyEl !== el) d.readyEl.classList.remove("ready");
+  if (el) el.classList.add("ready");
+  d.readyEl = el;
 }
 
 // The block eases toward where the pointer wants it each frame, instead of
@@ -531,11 +537,6 @@ function setupDrag(b, el) {
     }
     hooks.start();
     const reach = computeReachable(b);
-    const start = reach.get(stateKey(0, 0));
-    if (start.exitDir) {
-      exitBlock(b, el, start);
-      return;
-    }
     const r0 = Math.min(...b.cells.map((c) => c[0]));
     const c0 = Math.min(...b.cells.map((c) => c[1]));
     el.style.transition = "none";
@@ -545,6 +546,7 @@ function setupDrag(b, el) {
       reach,
       rects: buildRects(reach),
       pos: [0, 0],
+      target: [0, 0],
       startX: e.clientX,
       startY: e.clientY,
       baseLeft: c0 * STEP,
@@ -725,9 +727,14 @@ function exitBlock(block, el, state) {
   const shifted = shiftCells(block.cells, state.dr + vr, state.dc + vc);
   celebrateExit(block, findExit(block, shifted, state.exitDir));
 
-  // slide on through the gate; the edge of the grid hides the block as it goes
+  // line it up exactly with the gate, then slide straight through; the edge of the grid hides
+  // the block as it goes
   el.style.pointerEvents = "none";
   el.classList.add("gone");
+  el.style.transition = "none";
+  el.style.left = (Math.min(...cols) + state.dc) * STEP + "px";
+  el.style.top = (Math.min(...rows) + state.dr) * STEP + "px";
+  void el.offsetWidth;
   el.style.transition =
     "left 0.25s ease-in, top 0.25s ease-in, opacity 0.25s ease-in";
   el.style.left = (Math.min(...cols) + state.dc + vc * colSpan) * STEP + "px";
@@ -743,25 +750,28 @@ function exitBlock(block, el, state) {
 
 window.addEventListener("pointermove", (e) => {
   if (!drag) return;
-  const gate = dragTo(
-    drag,
-    (e.clientX - drag.startX) / STEP,
-    (e.clientY - drag.startY) / STEP,
-  );
+  drag.target = [(e.clientX - drag.startX) / STEP, (e.clientY - drag.startY) / STEP];
+  dragTo(drag, drag.target[0], drag.target[1]);
   showPos(drag);
+  const gate = drag.block.comet ? null : gatePush(drag, PUSH);
   if (gate) {
-    // locked onto a matching gate: straight through
+    // lined up with its gate and pushed into it: straight through
     const { block, el } = drag;
+    if (drag.readyEl) drag.readyEl.classList.remove("ready");
     stopGlide(drag);
     drag = null;
     exitBlock(block, el, gate);
+    return;
   }
+  showGateReady(drag);
 });
 
 function endDrag() {
   if (!drag) return;
-  const { block, el, reach, pos, baseLeft, baseTop } = drag;
-  stopGlide(drag);
+  const d = drag;
+  const { block, el, reach, pos, baseLeft, baseTop } = d;
+  if (d.readyEl) d.readyEl.classList.remove("ready");
+  stopGlide(d);
   drag = null;
 
   // settle on the closest square it may stop on (never on lava)
@@ -775,8 +785,11 @@ function endDrag() {
     best = reach.get(stateKey(0, 0));
     if (Math.abs(amt) >= 0.3) {
       for (const s of reach.values()) if (s.line === dir && s.lineEnd) best = s;
-      if (best.noStop && !best.exitDir) best = reach.get(stateKey(0, 0));
+      if (best.noStop && best.exitDir !== dir) best = reach.get(stateKey(0, 0));
+      // it flies out only through a gate straight ahead of it
+      if (best.exitDir === dir) return exitBlock(block, el, best);
     }
+    if (best.exitDir) best = Object.assign({}, best, { exitDir: null });
   } else {
     for (const s of reach.values()) {
       if (s.noStop && !s.exitDir) continue;
@@ -788,9 +801,10 @@ function endDrag() {
     }
   }
 
-  if (best.exitDir) {
-    exitBlock(block, el, best);
-    return;
+  // let go while pushing a lined-up block into its gate: it goes through
+  if (!block.comet) {
+    const gate = gatePush(d, PUSH * 0.75);
+    if (gate) return exitBlock(block, el, gate);
   }
 
   el.style.transition = "left 0.12s ease-out, top 0.12s ease-out";

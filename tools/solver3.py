@@ -2,7 +2,8 @@
 
 Rules (mirrors src/engine.js):
 - a block slides one square at a time through free squares (one drag can turn corners)
-- a block touching a gate of its colour goes straight through if its whole cross-section fits
+- a block lined up with a gate of its colour may be pushed through if its whole cross-section fits;
+  it may also stop in front of the gate or slide on past it
 - every drag that settles somewhere new, and every exit, is one move
 Existing blocks: ice (thaws after k blocks left), lockBy (chained until key block leaves),
 axis (h/v only), gray (obstacle, not needed), bomb (must leave within N moves), crates (ignored here).
@@ -89,9 +90,6 @@ def solve(level, rows=6, cols=6, max_states=300_000):
         occ = occupied(state, i)
         cur = state[i]
         cells0 = shifted(p["cells"], cur)
-        if (p.get("comet") or p.get("jelly")) and any(
-                step_result(p, cells0, d, occ, rows, cols, exits) == "exit" for d in dirs):
-            return True, []  # touching it next to its gate sends it straight out
         if p.get("comet"):
             can_exit = False
             spots = []
@@ -130,7 +128,6 @@ def solve(level, rows=6, cols=6, max_states=300_000):
             results = {d: step_result(p, cells, d, occ, rows, cols, exits) for d in dirs}
             if "exit" in results.values():
                 can_exit = True
-                continue
             if off != cur and not on_lava(cells):
                 spots.append(off)
             for d, res in results.items():

@@ -3,7 +3,7 @@
 Audience: an LLM coding agent (Claude Code) taking over development.
 Repo: `github.com/tiffanivick/color-jam` (branch `main`), deployed by GitHub Pages at
 `https://tiffanivick.github.io/color-jam/`. Owner plays it as an iPhone home-screen web app.
-Current live build: **37** (`?v=37`).
+Current live build: **38** (`?v=38`).
 
 ---
 
@@ -79,6 +79,11 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
 - Exiting: `findExit()` checks for a gate of the block's colour on the side it is moving toward, and that
   **all** of its cells fit inside the gate's span. `exitPathClear()` stops a block from passing through
   other blocks on the way out.
+- Since build 38 a block leaves only when it is **locked onto the square in front of its gate and the
+  finger pushes on past it** (`gatePush()`, `PUSH = 0.4` squares). The square in front of a gate is an
+  ordinary square: blocks may stop there or slide past. Tapping never sends a block out. The gate
+  glows (`.exit.ready`) while a lined-up block is pushed toward it, and `exitBlock()` snaps the block
+  exactly in line before sliding it through. `tools/solver3.py` mirrors this.
 - Flags / themed kinds:
   - `ice: n`: frozen until `n` other blocks leave.
   - `axis`: slides along its arrow only.

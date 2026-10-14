@@ -625,7 +625,10 @@ body[data-world="dusk"] #deco i { bottom: -6%; width: calc(30px * var(--s)); hei
 .exit {
   position: absolute;
   z-index: 2;
+  transition: filter 0.1s;
 }
+/* a lined-up block is being pushed into this gate */
+.exit.ready { filter: brightness(1.35) drop-shadow(0 0 6px rgba(255, 255, 255, 0.9)); }
 /* each gate carries the frame's own lit/shaded edges, so it reads as the wall itself
    changing colour: bright outer lip, dark slot walls either side */
 .exit-left,
