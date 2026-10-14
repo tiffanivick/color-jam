@@ -3,7 +3,7 @@
 Audience: an LLM coding agent (Claude Code) taking over development.
 Repo: `github.com/tiffanivick/color-jam` (branch `main`), deployed by GitHub Pages at
 `https://tiffanivick.github.io/color-jam/`. Owner plays it as an iPhone home-screen web app.
-Current live build: **36** (`?v=36`).
+Current live build: **37** (`?v=37`).
 
 ---
 
@@ -122,15 +122,16 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
 ## 3. Power-up visual spec (CRITICAL)
 
 ### 3.1 Status
-**The hammer and vacuum visuals are still wrong per the owner.** Rejected iterations, all live at some point:
+**Build 37: the hammer and vacuum are pre-rendered 3D sprites (§3.6), approved by the owner from
+stills before integration.** Earlier rejected iterations, all live at some point:
 1. Toy hammer swinging in from the side.
 2. Cartoon gloved hands or arms holding the tools.
 3. Flat side-profile "T" mallet (horizontal log on a vertical handle) that glides up.
-4. Top-down round "stamp" or "coin" (build 36, currently live). **Rejected:** it reads as a flat disc.
+4. Top-down round "stamp" or "coin" (build 36). **Rejected:** it reads as a flat disc.
 
 The owner wants the tools to look like the **3D, isometric, chunky** tools in *Color Block Jam*.
-The current code in `src/fx.js` uses hand-drawn SVG strings (`FX_HAMMER_SVG`, `FX_NOZZLE_SVG`).
-Flat SVG cannot meet the spec. Replace the art; keep the plumbing.
+The hand-drawn SVGs (`FX_HAMMER_SVG`, `FX_NOZZLE_SVG`) are gone; `src/fx.js` now shows
+`img/hammer-0..6.webp` and `img/vacuum.webp` through `fxSprite()` (see §3.6).
 
 ### 3.2 Hard requirements (both tools)
 - R1. **No hands, arms, gloves or characters.** The tool is an isolated asset. (All hand code is
@@ -185,53 +186,43 @@ Flat SVG cannot meet the spec. Replace the art; keep the plumbing.
   6. A lump in the block's colour travels down the hose and off-screen.
   7. The nozzle lifts and leaves, then call `done()`.
 
-### 3.5 Freeze (lower priority)
+### 3.5 Freeze (next)
 No target. An ice wand rises, bursts snowflakes, and `.fx-frost` covers the board for the freeze
 duration. No hands (already removed). Keep it vertical (no tilt). Restyle to the same 3D standard
 after the hammer and vacuum are accepted.
 
-### 3.6 Recommended approach: pre-rendered 3D sprites (started, not integrated)
-npm and CDNs are blocked in the original environment, so three.js could not be installed. A
-dependency-free **WebGL2 SDF ray-marcher** was written instead:
-- `tools/r3d/render.html`: GLSL scene. Uniforms:
-  - `tool` (0 hammer, 1 vacuum)
-  - `ang` (hammer swing about the hand pivot; vacuum forward tilt)
-  - `yaw` (handle direction)
-  - `elev` (camera elevation, 0.62 rad ≈ 35°)
-  - `S` (px per board square)
-  - `org` (pixel where world origin = strike point lands)
-- `tools/r3d/shoot.py`: renders frame lists through Playwright/Chromium (swiftshader works), 2×
-  supersampled, into a horizontal sprite sheet. Example:
+### 3.6 3D sprites (integrated in build 37)
+npm and CDNs were blocked in the original environment, so three.js could not be used. Instead a
+dependency-free **WebGL2 SDF ray-marcher** draws the tools, and the game shows pre-rendered images.
+- `tools/r3d/render.html`: GLSL scene, `renderFrame(o)`. Units are board squares; the board is the
+  plane y = 0; world (0,0,0) = the strike point. Uniforms/params: `tool` (0 hammer, 1 vacuum),
+  `ang` (hammer swing about the pivot; vacuum forward tilt), `yaw` (handle direction), `elev`
+  (camera elevation, 0.62 rad), `S` (px per square), `org` (`ox`,`oy`: where the strike point lands),
+  hammer shape `hr` (head radius), `hh` (head half-length), `gz` (grip start), `pz` (pivot distance).
+- `tools/r3d/preview.html#{"base":{...},"shots":[{...},…]}`: side-by-side variants over a board grid,
+  for tuning with the owner.
+- `tools/r3d/export.html`: renders the approved poses (4x supersampled, shown at 2x), crops each to
+  its own box and saves `img/hammer-N.webp` (raised 0 → contact 6), `img/vacuum.webp` and
+  `img/tools.json` (each image's size and strike point, the finger offset, the vacuum mouth).
+  Needs `python3 tools/r3d/serve.py` (port 8792, repo root, also accepts PUT into `img/`).
+  **After a re-export, copy the numbers from `img/tools.json` into `HAM3D` / `VAC3D` in `fx.js`.**
+- Approved look: hammer `hr .8, hh .95, gz 2.4, pz 1.8, yaw -1.2`, swing `ang -0.8 → 0`; vacuum
+  `ang 0.15` (chunky blue head, white bumper, mouth slot on the front, hose out of the top).
+- `shoot.py` and the `*_draft.png` files are the earlier Playwright route and first drafts.
 
-  ```
-  cd tools/r3d && python3 -m http.server 8799 &
-  python3 shoot.py '{"base":{"w":816,"h":960,"ox":168,"oy":264,"S":96,"elev":0.62,"tool":0,"yaw":-0.5},
-    "frames":[{"ang":-0.5},{"ang":-0.42},{"ang":-0.33},{"ang":-0.24},{"ang":-0.15},{"ang":-0.07},{"ang":0}],
-    "out":"hammer_sheet.png"}'
-  ```
-
-- Drafts: `tools/r3d/hammer_sheet_draft.png` (7 frames, raised → contact, 816×960 each, strike point
-  at px (168,264), S=96 = 2× device pixels per square) and `tools/r3d/vacuum_draft.png`
-  (336×1100, mouth at (168,130)).
-- These drafts already show real 3D shading. **They have not yet been reviewed by the owner.**
-  Tune them with the owner before integrating:
-  - The raised frames still show a lot of the end cap. Increase the barrel-side read (camera elevation,
-    head length, yaw) so it never looks like a coin.
-  - Possibly shorten the red grip.
-  - Make the vacuum's front mouth clearer.
-
-Integration plan:
-1. Export the sheets as WebP (iOS Safari supports it) into `img/`. Keep the files small.
-2. Hammer element: `div.fx-hammer3d` sized to one frame in CSS px (frame px / 2), with
-   `background: url(img/hammer.webp) 0 0 / (N*W)px H px`. Step frames by setting
-   `background-position-x` from a `requestAnimationFrame` timeline (raised → contact → raised, ×3).
-   Combine with `transform: scale()` about the strike-point `transform-origin`.
-3. Vacuum element: a single sprite and the same anchoring.
-4. Feed both into the existing `TOOL` table in `fx.js` (`g: {hx, hy, gx, gy}` = strike point and
-   finger point in sprite CSS px).
-
-Alternative if the owner supplies art: they offered to provide **pre-rendered 2D isometric sprites**.
-The same sprite-sheet integration applies.
+How the game uses them (`src/fx.js`):
+- `fxSprite(cls, HAM3D|VAC3D)`: a zero-size box placed **at the strike point**, holding one `<img>`
+  per pose, each offset by its own `hx, hy`; `el.show(i)` swaps poses. `transform-origin: 0 0`, so
+  scaling never moves the hit point. Images are preloaded when `fx.js` loads.
+- Hover size `HOVER = 1.2`. The finger sits `gy` px (× 1.2) straight below the strike point: on the
+  hammer the handle runs ≥100 px to the right of the target, so a finger on the handle could not
+  reach the right-hand columns. The vacuum's finger point is on its hose.
+- `hammerFX` runs one `fxRun()` timeline (rAF, with a 100 ms interval fallback so it still finishes
+  when the browser withholds frames): per strike, frame 0 → 6 and scale 1.2 → 1.0 with ease-in over
+  110 ms, squash `(1.07, 0.93)` on contact, swing back over 110 ms; strikes at 300/600/900 ms,
+  break at 990 ms, `done()` at 2070 ms.
+- `vacuumFX`: scale 1.2 → 1.0 on release, hum, slurp toward the strike point (= the mouth), lump
+  down the hose from `hit.y + 24`, lift and leave.
 
 ### 3.7 Existing plumbing to keep (`src/fx.js`)
 - `TOOL` table, `toolAimShow(mode)`, `toolAimPlace(x,y,lifted)`, `toolAimRest()`, `toolAimFinger(e)`:
@@ -258,7 +249,7 @@ The same sprite-sheet integration applies.
    `tick()` rAF in `app.js`, and per-effect rAF/WAAPI in `fx.js`. There is no central render loop to
    patch.
 
-### 4.2 Fix tool orientation and art without breaking anchoring
+### 4.2 Fix tool orientation and art without breaking anchoring (done in build 37)
 1. Replace `FX_HAMMER_SVG` and `FX_NOZZLE_SVG` usage with 3D sprite elements (§3.6). Update
    `TOOL.*.g` anchors to the new sprite geometry.
 2. Rewrite the pose and keyframe sections of `hammerFX` and `vacuumFX` to the cycles in §3.3 and §3.4:
@@ -275,7 +266,8 @@ The same sprite-sheet integration applies.
 ### 4.3 Verify
 - Owner sign-off is required on stills before shipping: render hover, contact and break frames.
 - `tools/tests/aimtest.py <Hammer|Vac> out.png`: arms the tool, touches below a target, drags, releases,
-  and captures slow-motion frames. Adjust its finger offset (`+92*k` / `+120*k`) to the new anchor offset.
+  and captures slow-motion frames. Its finger offsets (`+92*k` / `+120*k`) match build 37
+  (`HAM3D.gy`/`VAC3D.gy` × 1.2); change them together.
 - `tools/tests/wintest.py`: the level must not count as won until the animation finishes (`fxBusy` → 0,
   then `levelOver`).
 - `tools/tests/fxframes_slow.py`: generic slow-motion frame grabber (6× via patched timers and WAAPI).

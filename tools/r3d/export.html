@@ -1,0 +1,109 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Export tool sprites</title>
+<style>body { margin: 0; padding: 12px; background: #2b3550; color: #fff; font: 13px system-ui, sans-serif; } img { background: #5d7bb8; max-width: 100%; display: block; margin: 8px 0; }</style>
+</head><body>
+<div id="log">Rendering…</div>
+<iframe id="r" style="display:none"></iframe>
+<script>document.getElementById("r").src = "render.html?" + Date.now();</script>
+<script>
+// Renders each hammer pose and the vacuum at 2x device pixels (4x supersampled), crops each to
+// its own bounding box, and PUTs img/hammer-N.webp, img/vacuum.webp and img/tools.json to
+// tools/r3d/serve.py. Open http://localhost:8792/tools/r3d/export.html with that server running.
+const DPR = 2, SS = 2;
+const S = 54; // CSS px per board square (engine STEP)
+const ELEV = 0.62;
+const HAM = { tool: 0, hr: 0.8, hh: 0.95, gz: 2.4, pz: 1.8, yaw: -1.2 };
+const HAM_ANGS = [-0.8, -0.66, -0.52, -0.39, -0.26, -0.13, 0];
+const VAC = { tool: 1, ang: 0.15 };
+
+// world point -> CSS px relative to the world origin (the strike point on the board)
+const proj = (p) => ({ x: p[0] * S, y: (p[2] * Math.sin(ELEV) - p[1] * Math.cos(ELEV)) * S });
+// the GLSL rotX / rotY, transposed (= inverted), to take tool-local points back to the world
+const rotXT = (a, [x, y, z]) => [x, Math.cos(a) * y + Math.sin(a) * z, -Math.sin(a) * y + Math.cos(a) * z];
+const rotYT = (a, [x, y, z]) => [Math.cos(a) * x - Math.sin(a) * z, y, Math.sin(a) * x + Math.cos(a) * z];
+function hammerWorld(q, ang) {
+  const piv = [0, HAM.hh, HAM.pz];
+  const v = rotXT(ang, [q[0] - piv[0], q[1] - piv[1], q[2] - piv[2]]).map((c, i) => c + piv[i]);
+  return rotYT(HAM.yaw, v);
+}
+function vacWorld(q) {
+  const v = rotXT(VAC.ang, q);
+  return [v[0], v[1] + 0.42, v[2]];
+}
+
+function frame(rf, o) {
+  const k = DPR * SS;
+  const url = rf(Object.assign({ elev: ELEV }, o, { w: o.w * k, h: o.h * k, ox: o.ox * k, oy: o.oy * k, S: S * k }));
+  return new Promise((res) => {
+    const im = new Image();
+    im.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = o.w * DPR;
+      c.height = o.h * DPR;
+      const g = c.getContext("2d");
+      g.imageSmoothingQuality = "high";
+      g.drawImage(im, 0, 0, c.width, c.height);
+      res(c);
+    };
+    im.src = url;
+  });
+}
+function bbox(cs) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+  for (const c of cs) {
+    const d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+    for (let y = 0; y < c.height; y++)
+      for (let x = 0; x < c.width; x++)
+        if (d[(y * c.width + x) * 4 + 3] > 3) {
+          if (x < x0) x0 = x;
+          if (x > x1) x1 = x;
+          if (y < y0) y0 = y;
+          if (y > y1) y1 = y;
+        }
+  }
+  // whole CSS pixels
+  x0 = Math.floor(x0 / DPR) * DPR; y0 = Math.floor(y0 / DPR) * DPR;
+  x1 = Math.ceil((x1 + 1) / DPR) * DPR; y1 = Math.ceil((y1 + 1) / DPR) * DPR;
+  return { x0, y0, w: x1 - x0, h: y1 - y0 };
+}
+// one tightly cropped WebP per frame; returns where the strike point sits inside it (CSS px)
+async function save(c, o, name) {
+  const b = bbox([c]);
+  const out = document.createElement("canvas");
+  out.width = b.w;
+  out.height = b.h;
+  out.getContext("2d").drawImage(c, b.x0, b.y0, b.w, b.h, 0, 0, b.w, b.h);
+  const blob = await new Promise((r) => out.toBlob(r, "image/webp", 0.86));
+  await fetch("../../img/" + name, { method: "PUT", body: blob });
+  const im = new Image();
+  im.src = URL.createObjectURL(blob);
+  document.body.append(im);
+  return { w: b.w / DPR, h: b.h / DPR, hx: o.ox - b.x0 / DPR, hy: o.oy - b.y0 / DPR, kb: Math.round(blob.size / 1024) };
+}
+const r2 = (v) => Math.round(v * 10) / 10;
+
+document.getElementById("r").onload = async () => {
+  const rf = document.getElementById("r").contentWindow.renderFrame;
+  // hammer: one image per pose, raised (0) -> contact (N-1); the handle runs far enough to
+  // leave the screen from any square
+  const hb = { w: 1000, h: 1200, ox: 280, oy: 300 };
+  const frames = [];
+  for (let i = 0; i < HAM_ANGS.length; i++) {
+    const c = await frame(rf, Object.assign({}, hb, HAM, { ang: HAM_ANGS[i] }));
+    frames.push(await save(c, hb, `hammer-${i}.webp`));
+  }
+  const hf = proj(hammerWorld([0, HAM.hh, 3.0], HAM_ANGS[0])); // finger on the grip, hover pose
+  const vb = { w: 260, h: 1500, ox: 130, oy: 120 };
+  const v = await save(await frame(rf, Object.assign({}, vb, VAC)), vb, "vacuum.webp");
+  const vf = proj([0, 0.95, 4.5]); // finger on the hose
+  const vm = proj(vacWorld([0, -0.06, 0.62])); // the suction mouth
+  const meta = {
+    hammer: { frames, gx: r2(hf.x), gy: r2(hf.y) },
+    vacuum: { frame: v, gx: r2(vf.x), gy: r2(vf.y), mx: r2(vm.x), my: r2(vm.y) },
+  };
+  await fetch("../../img/tools.json", { method: "PUT", body: JSON.stringify(meta) });
+  document.getElementById("log").textContent = JSON.stringify(meta);
+  document.title = "exported";
+};
+</script>
+</body></html>

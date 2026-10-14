@@ -1,72 +1,91 @@
 // FX: power-up animations you can see.
-//  Hammer — a chunky 3D mallet on your finger: aim it, let go, it pounds the block three
-//           times and the block breaks into real pieces of itself.
-//  Vacuum — the floor head on your finger: aim it, let go, it settles flat on the board, the
+//  Hammer — a chunky 3D wooden mallet on your finger: aim it, let go, it swings down onto the
+//           block three times and the block breaks into real pieces of itself.
+//  Vacuum — the 3D floor head on your finger: aim it, let go, it settles on the board, the
 //           block is slurped under it and rides away down the hose.
 //  Freeze — you wave an ice wand; snowflakes burst out and frost covers the board.
 // Uses boardEl, PADDING, CELL, STEP and burst() from engine.js.
 
 
-// The tools are drawn top-down at a high angle (orthographic: you see their top and front
-// faces, so they look chunky and solid). They are locked straight up and down the screen:
-// the head is at the top, the handle runs straight down to your finger. Your finger IS the
-// handle — the tool follows it directly, with the head a fixed distance above it.
+// The hammer and vacuum are pre-rendered 3D sprites (tools/r3d: render.html draws them,
+// export.html writes img/*.webp and these numbers). One board square = 54 px, seen from a high
+// angle. Each tool is placed by its strike point — the spot on the board it lands on — which
+// sits at (hx, hy) inside each image. gx, gy is where your finger goes, measured from the
+// strike point at hover size: straight below it, so your finger never hides the head.
+// Hammer poses run from raised (0) to its face flat on the block (6); the handle runs off to
+// the lower right and off the screen.
+const HAM3D = {
+  frames: [
+    { w: 756, h: 854, hx: 36, hy: 151 },
+    { w: 763, h: 709, hx: 43, hy: 147 },
+    { w: 767, h: 590, hx: 47, hy: 141 },
+    { w: 770, h: 494, hx: 50, hy: 134 },
+    { w: 771, h: 404, hx: 51, hy: 125 },
+    { w: 770, h: 321, hx: 50, hy: 116 },
+    { w: 767, h: 238, hx: 47, hy: 106 },
+  ],
+  src: (i) => `img/hammer-${i}.webp`,
+  gx: 0,
+  gy: 76,
+};
+// Vacuum: the floor head tilted forward so its top and suction mouth both show; the mouth is
+// at the strike point and the ribbed hose runs straight down off the screen.
+const VAC3D = {
+  frames: [{ w: 148, h: 1165, hx: 74, hy: 57 }],
+  src: () => "img/vacuum.webp",
+  gx: 0,
+  gy: 99,
+};
+const HOVER = 1.2; // size while floating over the board (1 = touching it)
+// load every image now so nothing pops in the first time a tool is used
+[HAM3D, VAC3D].forEach((t) => t.frames.forEach((f, i) => (new Image().src = t.src(i))));
 
-// Hammer, 120x120, seen from straight above like a stamp: you look down on the back of the
-// round mallet head (its striking face is underneath, flat against the board) and the short
-// handle points up out of the screen at you. Head centre 60,58; your finger sits below it.
-const HAM = { w: 120, h: 120, hx: 60, hy: 58, gx: 60, gy: 150 };
-const FX_HAMMER_SVG = `<svg viewBox="0 0 120 120" width="120" height="120" style="overflow:visible" aria-hidden="true">
-  <defs>
-    <linearGradient id="fxm-side" x1="0" x2="1"><stop offset="0" stop-color="#6e3d17"/><stop offset="0.3" stop-color="#c98a4c"/><stop offset="0.5" stop-color="#e7b677"/><stop offset="0.75" stop-color="#b9783d"/><stop offset="1" stop-color="#5e3412"/></linearGradient>
-    <radialGradient id="fxm-top" cx="0.42" cy="0.36" r="0.72"><stop offset="0" stop-color="#fbe3b6"/><stop offset="0.6" stop-color="#e3b073"/><stop offset="1" stop-color="#b47439"/></radialGradient>
-    <linearGradient id="fxm-rim" x1="0" x2="1"><stop offset="0" stop-color="#8f6418"/><stop offset="0.4" stop-color="#ffe9a8"/><stop offset="1" stop-color="#8f6418"/></linearGradient>
-    <linearGradient id="fxm-hd" x1="0" x2="1"><stop offset="0" stop-color="#8e1826"/><stop offset="0.4" stop-color="#ff6b78"/><stop offset="1" stop-color="#7a1220"/></linearGradient>
-    <radialGradient id="fxm-cap" cx="0.4" cy="0.35" r="0.7"><stop offset="0" stop-color="#ffb3ba"/><stop offset="0.6" stop-color="#ef4656"/><stop offset="1" stop-color="#a81f2e"/></radialGradient>
-  </defs>
-  <!-- the round head: its side shows a little at the bottom, the gold rim, then its wooden back -->
-  <path d="M16 58v14a44 38 0 0 0 88 0V58Z" fill="url(#fxm-side)" stroke="#4e2a0e" stroke-width="2.5"/>
-  <path d="M16 64a44 38 0 0 0 88 0" fill="none" stroke="url(#fxm-rim)" stroke-width="5"/>
-  <ellipse cx="60" cy="58" rx="44" ry="38" fill="url(#fxm-top)" stroke="#4e2a0e" stroke-width="2.5"/>
-  <ellipse cx="60" cy="58" rx="38" ry="32.5" fill="none" stroke="url(#fxm-rim)" stroke-width="4"/>
-  <g fill="none" stroke="#a8692f" stroke-width="1.5" opacity="0.6"><ellipse cx="60" cy="58" rx="27" ry="23"/><ellipse cx="60" cy="58" rx="17" ry="14.5"/></g>
-  <ellipse cx="44" cy="40" rx="15" ry="7" transform="rotate(-25 44 40)" fill="#fff" opacity="0.45"/>
-  <!-- the handle, coming up out of the head toward you (foreshortened) -->
-  <ellipse cx="62" cy="64" rx="15" ry="12" fill="#000" opacity="0.22"/>
-  <path d="M49 58v12a11 9 0 0 0 22 0V58Z" fill="url(#fxm-hd)" stroke="#5e0e18" stroke-width="2"/>
-  <ellipse cx="60" cy="70" rx="11" ry="9" fill="url(#fxm-cap)" stroke="#5e0e18" stroke-width="2"/>
-  <ellipse cx="57" cy="67" rx="4" ry="2.5" fill="#fff" opacity="0.75"/>
-</svg>`;
+// a tool sprite: a zero-size box at the strike point (left/top) holding one image per pose;
+// el.show(i) swaps the pose. Scaling it scales about the strike point, so it never drifts off
+// the aimed square.
+function fxSprite(cls, t) {
+  const d = fxEl(cls + " fx-sprite");
+  d.innerHTML = t.frames
+    .map((f, i) => `<img src="${t.src(i)}" alt="" draggable="false" style="left:${-f.hx}px;top:${-f.hy}px;width:${f.w}px;height:${f.h}px${i ? ";visibility:hidden" : ""}">`)
+    .join("");
+  let cur = 0;
+  d.show = (i) => {
+    if (i === cur) return;
+    d.children[cur].style.visibility = "hidden";
+    d.children[i].style.visibility = "";
+    cur = i;
+  };
+  return d;
+}
+// a requestAnimationFrame timeline: step(ms) every frame for D ms, and each [ms, fn] event
+// once its time comes. window.__FXK slows it down for frame-by-frame captures.
+function fxRun(D, step, events) {
+  const k = window.__FXK || 1;
+  const t0 = performance.now();
+  events.sort((a, b) => a[0] - b[0]);
+  let next = 0;
+  let queued = false;
+  const tick = () => {
+    queued = false;
+    if (next > events.length) return;
+    const ms = Math.min(D, (performance.now() - t0) / k);
+    step(ms);
+    while (next < events.length && events[next][0] <= ms) events[next++][1]();
+    if (ms >= D) {
+      next = events.length + 1;
+      clearInterval(guard);
+    } else if (!queued) {
+      queued = true;
+      requestAnimationFrame(tick);
+    }
+  };
+  // the browser stops sending animation frames when the page isn't drawn (app switched away);
+  // keep the timeline going anyway so the block is still removed and the win check still runs
+  const guard = setInterval(tick, 100);
+  queued = true;
+  requestAnimationFrame(tick);
+}
 
-// Vacuum, 140x980. The floor head lies flat on the board, centre 70,40; the wand runs straight
-// down to your finger at 70,160 and the hose carries on down off the screen.
-const VAC = { w: 140, h: 980, hx: 70, hy: 40, gx: 70, gy: 160 };
-const FX_NOZZLE_SVG = `<svg viewBox="0 0 140 980" width="140" height="980" style="overflow:visible" aria-hidden="true">
-  <defs>
-    <linearGradient id="fvz-metal" x1="0" x2="1"><stop offset="0" stop-color="#8f98a8"/><stop offset="0.45" stop-color="#f4f6fa"/><stop offset="1" stop-color="#7d8696"/></linearGradient>
-    <linearGradient id="fvz-hose" x1="0" x2="1"><stop offset="0" stop-color="#8d97a8"/><stop offset="0.4" stop-color="#eef2f7"/><stop offset="1" stop-color="#7d8798"/></linearGradient>
-    <linearGradient id="fvz-top" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6db8ff"/><stop offset="1" stop-color="#2f7de0"/></linearGradient>
-    <linearGradient id="fvz-front" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f5fc8"/><stop offset="1" stop-color="#123f9e"/></linearGradient>
-    <pattern id="fvz-ribs" width="36" height="9" patternUnits="userSpaceOnUse"><rect width="36" height="2.5" y="3" fill="#000" opacity="0.14"/></pattern>
-  </defs>
-  <!-- hose, off the bottom of the screen -->
-  <rect x="52" y="168" width="36" height="812" rx="12" fill="url(#fvz-hose)" stroke="#6d7787" stroke-width="2"/>
-  <rect x="52" y="168" width="36" height="812" rx="12" fill="url(#fvz-ribs)"/>
-  <rect x="50" y="150" width="40" height="24" rx="7" fill="url(#fvz-metal)" stroke="#5d6676" stroke-width="2"/>
-  <!-- wand -->
-  <rect x="62" y="60" width="16" height="94" rx="6" fill="url(#fvz-metal)" stroke="#5d6676" stroke-width="2"/>
-  <rect x="66" y="66" width="3" height="80" rx="1.5" fill="#fff" opacity="0.7"/>
-  <!-- floor head, flat on the board: blue top, darker front, bristles along the bottom -->
-  <rect x="6" y="30" width="128" height="30" rx="11" fill="url(#fvz-front)" stroke="#0e2f7a" stroke-width="2.5"/>
-  <rect x="12" y="56" width="116" height="6" rx="3" fill="#d6dde8" stroke="#8d97a8" stroke-width="1"/>
-  <rect x="6" y="8" width="128" height="38" rx="14" fill="url(#fvz-top)" stroke="#0e2f7a" stroke-width="2.5"/>
-  <rect x="20" y="13" width="70" height="8" rx="4" fill="#fff" opacity="0.5"/>
-  <circle cx="104" cy="25" r="6" fill="#ff4d6a" stroke="#b3203c" stroke-width="1.5"/><circle cx="102.5" cy="23.5" r="2" fill="#fff" opacity="0.7"/>
-  <circle cx="120" cy="25" r="6" fill="#ffb21f" stroke="#b97808" stroke-width="1.5"/><circle cx="118.5" cy="23.5" r="2" fill="#fff" opacity="0.7"/>
-  <rect x="56" y="40" width="28" height="22" rx="6" fill="url(#fvz-metal)" stroke="#5d6676" stroke-width="2"/>
-</svg>`;
-
-// the block's picture on the board, in board pixels
 let fxBusy = 0; // how many power-up animations are playing
 
 // the block's picture on the board, in board pixels
@@ -104,38 +123,45 @@ function hammerFX(b, done) {
   const aimed = window.__toolFrom;
   window.__toolFrom = null;
   const hit = aimed || fxSpot(b);
-  // its shadow on the board: small and dark when the head touches, wide and faint when raised
-  // its shadow on the board: tight and dark when the face touches, bigger and fainter when lifted
+  // its shadow on the board: wide and faint while raised, tight and dark when the face lands
   const shadow = fxEl("fx-rshadow");
   shadow.style.left = hit.x - 46 + "px";
-  shadow.style.top = hit.y - 38 + "px";
-  const h = fxEl("fx-hammer", FX_HAMMER_SVG);
-  h.style.left = hit.x - HAM.hx + "px";
-  h.style.top = hit.y - HAM.hy + "px";
-  // no sliding: lifted toward you = 150% size, a strike = a fast drop to 100% with a squash
-  const D = 1400;
+  shadow.style.top = hit.y - 39 + "px";
+  const h = fxSprite("fx-hammer", HAM3D);
+  h.style.left = hit.x + "px";
+  h.style.top = hit.y + "px";
+  // each strike swings the head down about the handle (raised pose -> face flat on the block)
+  // while it shrinks from hover size to 1, squashes on contact, then swings back up
+  const LAST = HAM3D.frames.length - 1;
   const HITS = [300, 600, 900];
-  const LIFT = "scale(1.5)";
-  const SQUASH = "scale(1.07, 0.93)";
-  const kf = [{ transform: aimed ? LIFT : "scale(0.3)", opacity: aimed ? 1 : 0, offset: 0 }];
-  if (!aimed) kf.push({ transform: LIFT, opacity: 1, offset: 140 / D, easing: "cubic-bezier(.2,.8,.3,1.3)" });
-  HITS.forEach((t, i) => {
-    kf.push({ transform: LIFT, opacity: 1, offset: (t - 110) / D, easing: "cubic-bezier(.6,0,1,.6)" });
-    kf.push({ transform: SQUASH, opacity: 1, offset: t / D, easing: "ease-out" });
-    kf.push({ transform: "scale(1.02, 0.98)", opacity: 1, offset: (t + 40) / D, easing: "cubic-bezier(.2,.7,.4,1)" });
-    if (i < 2) kf.push({ transform: LIFT, opacity: 1, offset: (t + 150) / D, easing: "linear" });
-  });
-  kf.push({ transform: "scale(1.3)", opacity: 1, offset: 1120 / D, easing: "ease-in" });
-  kf.push({ transform: "scale(1.45)", opacity: 0, offset: 1 });
-  h.animate(kf, { duration: D, easing: "linear", fill: "forwards" });
-  const sh = (t, sx, dx, o) => ({ transform: `translate(${dx}px, ${dx * 0.8}px) scale(${sx})`, opacity: o, offset: t / D });
-  const skf = [sh(0, 1.5, 14, aimed ? 0.25 : 0)];
-  HITS.forEach((t, i) => {
-    skf.push(sh(t - 110, 1.5, 14, 0.25), sh(t, 1, 3, 0.55));
-    if (i < 2) skf.push(sh(t + 150, 1.5, 14, 0.25));
-  });
-  skf.push(sh(1120, 1.35, 11, 0.3), sh(D, 1.45, 13, 0));
-  shadow.animate(skf, { duration: D, easing: "linear", fill: "forwards" });
+  const BREAK = HITS[2] + 90;
+  const END = BREAK + 1080;
+  const easeIn = (p) => p * p;
+  const easeOut = (p) => 1 - (1 - p) * (1 - p);
+  const clamp01 = (p) => Math.max(0, Math.min(1, p));
+  // u: 0 = raised, 1 = face on the block
+  function pose(ms) {
+    let u = 0;
+    let sq = 0; // squash, 1 right at contact
+    let o = aimed ? 1 : clamp01(ms / 140);
+    HITS.forEach((t, i) => {
+      if (ms >= t - 110 && ms < t) u = easeIn((ms - t + 110) / 110);
+      else if (ms >= t && ms < t + 40) (u = 1), (sq = 1 - (ms - t) / 40);
+      else if (i < 2 && ms >= t + 40 && ms < t + 150) u = 1 - easeOut((ms - t - 40) / 110);
+      else if (i === 2 && ms >= t + 40) {
+        // after the last blow: rest on the pieces, lift away and fade
+        u = 1 - easeOut(clamp01((ms - 1060) / 190));
+        o = 1 - clamp01((ms - 1250) / 150);
+      }
+    });
+    const s = HOVER - (HOVER - 1) * u;
+    h.show(Math.round(u * LAST));
+    h.style.transform = `scale(${s * (1 + 0.07 * sq)}, ${s * (1 - 0.07 * sq)})`;
+    h.style.opacity = o;
+    shadow.style.transform = `scale(${1.35 - 0.45 * u})`;
+    shadow.style.opacity = (0.25 + 0.3 * u) * o;
+  }
+  pose(0);
 
   const crack = document.createElement("div");
   crack.className = "fx-crack";
@@ -144,37 +170,34 @@ function hammerFX(b, done) {
   crack.style.opacity = "0";
   el.appendChild(crack);
   // each blow: squash, a jolt, sparks, and the cracks grow
-  HITS.forEach((t, n) => {
-    setTimeout(() => {
-      Sfx.smash(n);
-      el.animate(
-        [
-          { transform: "translateZ(0) scale(1, 1)" },
-          { transform: `translateZ(0) scale(${1.04 + n * 0.02}, ${0.9 - n * 0.03})` },
-          { transform: "translateZ(0) scale(0.98, 1.02)" },
-          { transform: "translateZ(0) scale(1, 1)" },
-        ],
-        { duration: 190, easing: "ease-out" },
-      );
-      crack.style.opacity = "1";
-      crack.style.transform = `scale(${[0.5, 0.8, 1.1][n]}) rotate(${n * 25}deg)`;
-      const flash = document.createElement("div");
-      flash.className = "fx-flash";
-      flash.style.left = hit.x - 40 + "px";
-      flash.style.top = hit.y - 40 + "px";
-      boardEl.appendChild(flash);
-      setTimeout(() => flash.remove(), 420);
-      boardEl.animate(
-        [{ transform: "translate(0,0)" }, { transform: `translate(${-3 - n}px,${2 + n}px)` }, { transform: `translate(${3 + n}px,${-2 - n}px)` }, { transform: "translate(0,0)" }],
-        { duration: 200 },
-      );
-      burst(hit.x, hit.y, n < 2 ? "#ffffff" : "#efe6d2", 6 + n * 5);
-    }, t);
-  });
+  const impact = (n) => {
+    Sfx.smash(n);
+    el.animate(
+      [
+        { transform: "translateZ(0) scale(1, 1)" },
+        { transform: `translateZ(0) scale(${1.04 + n * 0.02}, ${0.9 - n * 0.03})` },
+        { transform: "translateZ(0) scale(0.98, 1.02)" },
+        { transform: "translateZ(0) scale(1, 1)" },
+      ],
+      { duration: 190, easing: "ease-out" },
+    );
+    crack.style.opacity = "1";
+    crack.style.transform = `scale(${[0.5, 0.8, 1.1][n]}) rotate(${n * 25}deg)`;
+    const flash = document.createElement("div");
+    flash.className = "fx-flash";
+    flash.style.left = hit.x - 40 + "px";
+    flash.style.top = hit.y - 40 + "px";
+    boardEl.appendChild(flash);
+    setTimeout(() => flash.remove(), 420);
+    boardEl.animate(
+      [{ transform: "translate(0,0)" }, { transform: `translate(${-3 - n}px,${2 + n}px)` }, { transform: `translate(${3 + n}px,${-2 - n}px)` }, { transform: "translate(0,0)" }],
+      { duration: 200 },
+    );
+    burst(hit.x, hit.y, n < 2 ? "#ffffff" : "#efe6d2", 6 + n * 5);
+  };
 
   // the last blow breaks it into wedges along the cracks, which tumble away and fall
-  const IMPACT = HITS[2];
-  setTimeout(() => {
+  const breakUp = () => {
     Sfx.crack();
     const px = hit.x - r.x;
     const py = hit.y - r.y;
@@ -238,25 +261,32 @@ function hammerFX(b, done) {
     el.style.transition = "none";
     el.style.opacity = "0"; // (not visibility: the pieces borrow this block's clip shapes)
     burst(hit.x, hit.y, "#efe6d2", 16);
-  }, IMPACT + 90);
+  };
 
-  setTimeout(() => {
-    h.remove();
-    shadow.remove();
-    el.remove();
-    fxBusy--;
-    done && done();
-  }, IMPACT + 90 + 1080);
+  fxRun(END, pose, [
+    ...HITS.map((t, n) => [t, () => impact(n)]),
+    [BREAK, breakUp],
+    [
+      END,
+      () => {
+        h.remove();
+        shadow.remove();
+        el.remove();
+        fxBusy--;
+        done && done();
+      },
+    ],
+  ]);
 }
 
 
 // ---------------------------------------------------------------- Aiming the hammer / vacuum
-// While a tool is picked it waits at the bottom centre of the board. Touch anywhere and your
-// finger becomes its handle: it follows your finger directly, head a fixed distance above it,
-// casting a shadow on the block below. Let go over a block to use it there.
+// While a tool is picked it waits at the bottom centre of the board. Touch anywhere and it
+// jumps to your finger and follows it directly, hovering a fixed distance above it and casting
+// a shadow on the block it will land on. Let go over a block to use it there.
 const TOOL = {
-  hammer: { cls: "fx-hammer", svg: () => FX_HAMMER_SVG, g: HAM, sh: "fx-rshadow", sw: 46, shh: 39, off: 14, scale: 1.5 },
-  vacuum: { cls: "fx-nozzle", svg: () => FX_NOZZLE_SVG, g: VAC, sh: "fx-vshadow", sw: 66, shh: 15, off: 6, scale: 1 },
+  hammer: { cls: "fx-hammer", g: HAM3D, sh: "fx-rshadow", sw: 46, shh: 39, scale: 1.35, o: 0.3 },
+  vacuum: { cls: "fx-nozzle", g: VAC3D, sh: "fx-vshadow", sw: 66, shh: 15, scale: 1.15, o: 0.6 },
 };
 let aim = null;
 function boardPoint(e) {
@@ -273,24 +303,22 @@ function toolAimShow(mode) {
   }
   if (!mode || !TOOL[mode] || aim) return;
   const t = TOOL[mode];
-  aim = { mode, t, el: fxEl(t.cls + " fx-aim", t.svg()), sh: fxEl(t.sh + " fx-aim-sh"), x: 0, y: 0, target: null, down: false };
-  aim.el.style.transformOrigin = t.g.hx + "px " + t.g.hy + "px";
+  aim = { mode, t, el: fxSprite(t.cls + " fx-aim", t.g), sh: fxEl(t.sh + " fx-aim-sh"), x: 0, y: 0, target: null, down: false };
   toolAimRest();
 }
 const hammerAimShow = (on) => toolAimShow(on ? "hammer" : null);
-// (x,y) is where the tool's head is
+// (x,y) is the tool's strike point: the spot on the board it will land on
 function toolAimPlace(x, y, lifted) {
-  const g = aim.t.g;
   aim.x = x;
   aim.y = y;
-  aim.el.style.left = x - g.hx + "px";
-  aim.el.style.top = y - g.hy + "px";
+  aim.el.style.left = x + "px";
+  aim.el.style.top = y + "px";
   aim.el.classList.toggle("resting", !lifted);
   const t = aim.t;
-  aim.sh.style.left = x - t.sw + t.off + "px";
-  aim.sh.style.top = y - t.shh + t.off * 0.8 + "px";
+  aim.sh.style.left = x - t.sw + "px";
+  aim.sh.style.top = y - t.shh + "px";
   aim.sh.style.transform = `scale(${t.scale})`;
-  aim.sh.style.opacity = lifted ? (aim.mode === "hammer" ? "0.3" : "0.6") : "0";
+  aim.sh.style.opacity = lifted ? t.o : "0";
   const c = Math.floor((x - PADDING) / STEP);
   const r = Math.floor((y - PADDING) / STEP);
   const b = lifted ? blocks.find((o) => !o.removed && o.cells.some(([rr, cc]) => rr === r && cc === c)) || null : null;
@@ -306,7 +334,7 @@ function toolAimRest() {
 function toolAimFinger(e) {
   const p = boardPoint(e);
   const g = aim.t.g;
-  toolAimPlace(p.x + (g.hx - g.gx), p.y + (g.hy - g.gy), true);
+  toolAimPlace(p.x - g.gx * HOVER, p.y - g.gy * HOVER, true);
 }
 window.addEventListener(
   "pointerdown",
@@ -341,30 +369,30 @@ window.addEventListener("pointerup", toolAimUp, true);
 window.addEventListener("pointercancel", toolAimUp, true);
 
 // ---------------------------------------------------------------- Vacuum
-// The floor head sits flat on the board where you aimed, the block trembles and is slurped
-// under it, and a lump in its colour rides away down the hose.
+// The floor head lowers from hover size onto the board where you aimed (still tilted forward,
+// mouth toward the block), the block trembles and is slurped under it, and a lump in its colour
+// rides away down the hose.
 function vacuumFX(group, done) {
   fxBusy++;
   const aimed = window.__toolFrom;
   window.__toolFrom = null;
   const hit = aimed || fxSpot(group[0]);
   const shadow = fxEl("fx-vshadow");
-  shadow.style.left = hit.x - 60 + "px";
-  shadow.style.top = hit.y - 2 + "px";
-  const n = fxEl("fx-nozzle", FX_NOZZLE_SVG);
-  n.style.left = hit.x - VAC.hx + "px";
-  n.style.top = hit.y - VAC.hy + "px";
-  n.style.transformOrigin = VAC.hx + "px " + VAC.hy + "px";
+  shadow.style.left = hit.x - 66 + "px";
+  shadow.style.top = hit.y - 15 + "px";
+  const n = fxSprite("fx-nozzle", VAC3D);
+  n.style.left = hit.x + "px";
+  n.style.top = hit.y + "px";
   const below = boardEl.clientHeight + 260 - hit.y;
   n.animate(
     [
-      { transform: aimed ? "translate(0, -16px) scale(1.06)" : `translate(0, ${below}px)` },
+      { transform: aimed ? `scale(${HOVER})` : `translate(0, ${below}px)` },
       { transform: "translate(0, 2px) scale(0.98)", offset: 0.7 },
       { transform: "translate(0, 0) scale(1)" },
     ],
     { duration: 300, easing: "cubic-bezier(.3,.7,.4,1)", fill: "forwards" },
   );
-  shadow.animate([{ opacity: 0, transform: "scale(1.3)" }, { opacity: 0.55, transform: "scale(1)" }], { duration: 300, fill: "forwards" });
+  shadow.animate([{ opacity: aimed ? 0.6 : 0, transform: "scale(1.15)" }, { opacity: 0.7, transform: "scale(0.95)" }], { duration: 300, fill: "forwards" });
   setTimeout(() => Sfx.suck(), 180);
   let hum = null;
   setTimeout(() => {
@@ -429,7 +457,7 @@ function vacuumFX(group, done) {
         lump.className = "fx-hoselump";
         lump.style.background = b.color;
         lump.style.left = hit.x - 13 + "px";
-        lump.style.top = hit.y + 110 + "px";
+        lump.style.top = hit.y + 24 + "px";
         boardEl.appendChild(lump);
         lump.animate(
           [
@@ -451,7 +479,7 @@ function vacuumFX(group, done) {
       easing: "ease-in",
       fill: "forwards",
     });
-    shadow.animate([{ opacity: 0.55 }, { opacity: 0 }], { duration: 200, fill: "forwards" });
+    shadow.animate([{ opacity: 0.7 }, { opacity: 0 }], { duration: 200, fill: "forwards" });
   }, end + 420);
   setTimeout(() => {
     n.remove();

@@ -1,0 +1,45 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Tool preview</title>
+<style>
+  body { margin: 0; padding: 12px; background: #2b3550; font: 13px system-ui, sans-serif; color: #fff; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; }
+  figure { margin: 0; }
+  figcaption { padding: 4px 0; opacity: .85; }
+  .stage { position: relative; overflow: hidden; border-radius: 8px;
+    background-color: #5d7bb8;
+    background-image: linear-gradient(#4a679f 2px, transparent 2px), linear-gradient(90deg, #4a679f 2px, transparent 2px); }
+  .stage img { position: absolute; left: 0; top: 0; }
+  .target { position: absolute; background: rgba(255,214,90,.55); border-radius: 6px; }
+</style></head>
+<body>
+<div class="row" id="out"></div>
+<iframe id="r" style="display:none"></iframe>
+<script>document.getElementById("r").src = "render.html?" + Date.now();</script>
+<script>
+// Usage: preview.html#{"base":{...render.html params in CSS px...},"shots":[{"label":"…", …overrides}]}
+// Each shot is drawn 2x supersampled and shown at 1x over a board grid (one square = S px).
+addEventListener("hashchange", () => location.reload());
+const spec = JSON.parse(decodeURIComponent(location.hash.slice(1)));
+const out = document.getElementById("out");
+document.getElementById("r").onload = async () => {
+  const rf = document.getElementById("r").contentWindow.renderFrame;
+  for (const shot of spec.shots) {
+    const o = Object.assign({}, spec.base, shot);
+    const big = {}; for (const k in o) big[k] = ["w","h","ox","oy","S"].includes(k) ? o[k] * 2 : o[k];
+    const url = rf(big);
+    const fig = document.createElement("figure");
+    const st = document.createElement("div"); st.className = "stage";
+    st.style.width = o.w + "px"; st.style.height = o.h + "px";
+    st.style.backgroundSize = `${o.S}px ${o.S}px`;
+    st.style.backgroundPosition = `${o.ox - o.S/2}px ${o.oy - o.S/2}px`;
+    const t = document.createElement("div"); t.className = "target";
+    Object.assign(t.style, { left: o.ox - o.S/2 + "px", top: o.oy - o.S/2 + "px", width: o.S + "px", height: o.S + "px" });
+    const img = new Image(); img.src = url; img.width = o.w; img.height = o.h;
+    st.append(t, img);
+    const cap = document.createElement("figcaption"); cap.textContent = shot.label || JSON.stringify(shot);
+    fig.append(st, cap); out.append(fig);
+  }
+  document.title = "done";
+};
+</script>
+</body></html>
