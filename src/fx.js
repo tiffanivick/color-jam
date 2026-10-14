@@ -1,6 +1,6 @@
 // FX: power-up animations you can see.
-//  Hammer — a cute toy hammer rises from the bottom of the screen, rears back toward you,
-//           slams down, and the block cracks and breaks into real pieces of itself.
+//  Hammer — first person: both your hands raise a big wooden mallet and pound the block
+//           three times; it cracks and breaks into real pieces of itself.
 //  Vacuum — a canister vacuum rolls in at the bottom, you hold the wand, the block is slurped
 //           into the floor head and rides down the hose into the canister's window.
 //  Freeze — you wave an ice wand; snowflakes burst out and frost covers the board.
@@ -9,6 +9,35 @@
 
 // a white cartoon glove holding a handle (fist centred on cx, top at `top`), with a sleeve
 // running down off the bottom of the screen — so it feels like it's your hand
+
+// one of your hands, seen from behind (first person): a gloved fist wrapped round a handle at
+// cx,cy, its sleeve running off toward a bottom corner of the screen (lean in degrees)
+function fxFist(cx, cy, w, lean, id, sleeve = "#5b7cff") {
+  const h = w * 0.8;
+  const x = cx - w / 2;
+  const y = cy - h / 2;
+  const side = lean > 0 ? -1 : 1; // the thumb sits on the side the arm comes from
+  let k = "";
+  for (let i = 0; i < 4; i++) {
+    const kx = x + w * (0.2 + 0.2 * i);
+    k += `<ellipse cx="${kx}" cy="${y + h * 0.2}" rx="${w * 0.12}" ry="${h * 0.16}" fill="url(#fk-${id})" stroke="#a6a8c2" stroke-width="1.8"/>`;
+    if (i) k += `<path d="M${kx - w * 0.1} ${y + h * 0.3}v${h * 0.36}" stroke="#c0c2d6" stroke-width="1.8" stroke-linecap="round"/>`;
+  }
+  return `<defs>
+    <radialGradient id="fk-${id}" cx="0.35" cy="0.3" r="0.9"><stop offset="0" stop-color="#ffffff"/><stop offset="0.55" stop-color="#eceef7"/><stop offset="1" stop-color="#b9bcd3"/></radialGradient>
+    <linearGradient id="fs-${id}" x1="0" x2="1"><stop offset="0" stop-color="#000" stop-opacity="0.25"/><stop offset="0.45" stop-color="#fff" stop-opacity="0.28"/><stop offset="1" stop-color="#000" stop-opacity="0.3"/></linearGradient>
+  </defs>
+  <g transform="rotate(${lean} ${cx} ${cy})">
+    <rect x="${cx - w * 0.42}" y="${cy + h * 0.25}" width="${w * 0.84}" height="360" rx="${w * 0.3}" fill="${sleeve}"/>
+    <rect x="${cx - w * 0.42}" y="${cy + h * 0.25}" width="${w * 0.84}" height="360" rx="${w * 0.3}" fill="url(#fs-${id})" stroke="rgba(10,10,60,0.35)" stroke-width="2"/>
+    <rect x="${cx - w * 0.48}" y="${cy + h * 0.22}" width="${w * 0.96}" height="${w * 0.34}" rx="${w * 0.14}" fill="url(#fk-${id})" stroke="#a6a8c2" stroke-width="2"/>
+  </g>
+  <rect x="${x}" y="${y + h * 0.1}" width="${w}" height="${h * 0.9}" rx="${h * 0.38}" fill="url(#fk-${id})" stroke="#a6a8c2" stroke-width="2.4"/>
+  ${k}
+  <ellipse cx="${cx + side * w * 0.5}" cy="${cy + h * 0.12}" rx="${w * 0.17}" ry="${h * 0.3}" transform="rotate(${side * -25} ${cx + side * w * 0.5} ${cy + h * 0.12})" fill="url(#fk-${id})" stroke="#a6a8c2" stroke-width="2"/>
+  <ellipse cx="${x + w * 0.3}" cy="${y + h * 0.42}" rx="${w * 0.16}" ry="${h * 0.07}" fill="#fff" opacity="0.85"/>`;
+}
+
 function fxGlove(cx, top, id, lean = 0, sleeve = "#5b7cff") {
   return `<defs>
     <linearGradient id="fxg-${id}" x1="0" x2="1"><stop offset="0" stop-color="#000" stop-opacity="0.18"/><stop offset="0.4" stop-color="#fff" stop-opacity="0.3"/><stop offset="1" stop-color="#000" stop-opacity="0.25"/></linearGradient>
@@ -26,37 +55,32 @@ function fxGlove(cx, top, id, lean = 0, sleeve = "#5b7cff") {
   <ellipse cx="${cx - 12}" cy="${top + 7}" rx="7" ry="2.4" fill="#fff"/>`;
 }
 
-const FX_HAMMER_SVG = `<svg viewBox="0 0 140 430" width="140" height="430" style="overflow:visible" aria-hidden="true">
+const FX_HAMMER_SVG = `<svg viewBox="0 0 220 460" width="200" height="418" style="overflow:visible" aria-hidden="true">
   <defs>
-    <linearGradient id="fxh-body" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ff8fa0"/><stop offset="0.35" stop-color="#ff4d5e"/><stop offset="1" stop-color="#b51d36"/>
-    </linearGradient>
-    <linearGradient id="fxh-cap" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#ffe680"/><stop offset="0.5" stop-color="#ffd447"/><stop offset="1" stop-color="#d9a514"/>
-    </linearGradient>
-    <linearGradient id="fxh-handle" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#e2a514"/><stop offset="0.45" stop-color="#ffe27a"/><stop offset="1" stop-color="#c98a10"/>
-    </linearGradient>
-    <linearGradient id="fxh-grip" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#2f7de0"/><stop offset="0.45" stop-color="#6fb2ff"/><stop offset="1" stop-color="#2160b8"/>
-    </linearGradient>
+    <linearGradient id="fxm-wood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3cf95"/><stop offset="0.3" stop-color="#dba465"/><stop offset="0.75" stop-color="#b9783d"/><stop offset="1" stop-color="#7f4a1f"/></linearGradient>
+    <radialGradient id="fxm-end" cx="0.45" cy="0.4" r="0.7"><stop offset="0" stop-color="#f6d9a8"/><stop offset="0.7" stop-color="#d9a466"/><stop offset="1" stop-color="#a86a33"/></radialGradient>
+    <linearGradient id="fxm-handle" x1="0" x2="1"><stop offset="0" stop-color="#8c5426"/><stop offset="0.4" stop-color="#e8b878"/><stop offset="0.6" stop-color="#d49a5a"/><stop offset="1" stop-color="#7a451c"/></linearGradient>
+    <linearGradient id="fxm-band" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe9a8"/><stop offset="0.4" stop-color="#e2b04a"/><stop offset="1" stop-color="#8f6418"/></linearGradient>
   </defs>
-  <!-- handle -->
-  <rect x="58" y="70" width="24" height="152" rx="12" fill="url(#fxh-handle)" stroke="#a8770a" stroke-width="2"/>
-  <rect x="58" y="150" width="24" height="72" rx="12" fill="url(#fxh-grip)" stroke="#1d4f99" stroke-width="2"/>
-  <path d="M60 164h20M60 178h20M60 192h20M60 206h20" stroke="#1d4f99" stroke-width="2" opacity="0.5"/>
-  <rect x="64" y="76" width="5" height="70" rx="2.5" fill="#fff" opacity="0.55"/>
-  <!-- head: a squishy toy cylinder with yellow end caps -->
-  <rect x="16" y="14" width="108" height="66" rx="30" fill="url(#fxh-body)" stroke="#8c1428" stroke-width="2.5"/>
-  <ellipse cx="18" cy="47" rx="15" ry="33" fill="url(#fxh-cap)" stroke="#a8770a" stroke-width="2.5"/>
-  <ellipse cx="122" cy="47" rx="15" ry="33" fill="url(#fxh-cap)" stroke="#a8770a" stroke-width="2.5"/>
-  <ellipse cx="14" cy="38" rx="4" ry="10" fill="#fff" opacity="0.7"/>
-  <ellipse cx="118" cy="38" rx="4" ry="10" fill="#fff" opacity="0.7"/>
-  <rect x="36" y="22" width="68" height="12" rx="6" fill="#fff" opacity="0.55"/>
-  <rect x="44" y="26" width="18" height="4" rx="2" fill="#fff" opacity="0.8"/>
-  <!-- a little star sticker -->
-  <path d="M70 46l3.5 7.2 7.9 1.1-5.7 5.6 1.4 7.8-7.1-3.7-7.1 3.7 1.4-7.8-5.7-5.6 7.9-1.1Z" fill="#fff6c8" stroke="#ffd447" stroke-width="1.5" stroke-linejoin="round"/>
-  ${fxGlove(70, 166, 'h', 4)}
+  <!-- handle, wider near you -->
+  <path d="M100 100h20l12 360h-44Z" fill="url(#fxm-handle)" stroke="#5e3412" stroke-width="2"/>
+  <path d="M106 112l-3 330" stroke="#fff" stroke-width="3" opacity="0.35" stroke-linecap="round"/>
+  <!-- head: a big wooden barrel -->
+  <rect x="34" y="12" width="152" height="96" rx="20" fill="url(#fxm-wood)" stroke="#6b3c16" stroke-width="2.5"/>
+  <path d="M44 34c30-6 60 4 92-2s34-2 42 0M44 58c26 5 52-5 80 1s40 4 54-2M44 84c34 4 64-4 96 2s30 2 38-1" fill="none" stroke="#9a5f2c" stroke-width="2" opacity="0.55"/>
+  <rect x="50" y="10" width="14" height="100" rx="4" fill="url(#fxm-band)" stroke="#7a5512" stroke-width="1.5"/>
+  <rect x="156" y="10" width="14" height="100" rx="4" fill="url(#fxm-band)" stroke="#7a5512" stroke-width="1.5"/>
+  <ellipse cx="34" cy="60" rx="20" ry="48" fill="url(#fxm-end)" stroke="#6b3c16" stroke-width="2.5"/>
+  <ellipse cx="186" cy="60" rx="20" ry="48" fill="url(#fxm-end)" stroke="#6b3c16" stroke-width="2.5"/>
+  <g fill="none" stroke="#a8692f" stroke-width="1.6" opacity="0.7">
+    <ellipse cx="34" cy="60" rx="13" ry="33"/><ellipse cx="34" cy="60" rx="7" ry="18"/>
+    <ellipse cx="186" cy="60" rx="13" ry="33"/><ellipse cx="186" cy="60" rx="7" ry="18"/>
+  </g>
+  <rect x="70" y="20" width="80" height="14" rx="7" fill="#fff" opacity="0.4"/>
+  <ellipse cx="28" cy="42" rx="5" ry="12" fill="#fff" opacity="0.5"/>
+  <!-- both your hands on the handle -->
+  ${fxFist(110, 296, 62, -34, "hl")}
+  ${fxFist(110, 384, 76, 30, "hr")}
 </svg>`;
 
 // the canister (130x120, hose collar at 65,6)
@@ -77,7 +101,8 @@ const FX_CAN_SVG = `
 const FX_WAND_SVG = (lean) => `
   <rect x="-5" y="8" width="10" height="128" rx="4" fill="url(#vc-metal)" stroke="#5d6676" stroke-width="1.5"/>
   <rect x="-10" y="128" width="20" height="56" rx="8" fill="#353b48" stroke="#1d2129" stroke-width="2"/>
-  ${fxGlove(0, 134, "v", lean)}
+  ${fxFist(0, 74, 40, lean * 0.35, "v2")}
+  ${fxFist(0, 156, 48, lean * 1.7, "v1")}
   <rect x="-48" y="-14" width="96" height="27" rx="11" fill="#2a2e37" stroke="#101217" stroke-width="2"/>
   <rect x="-43" y="-11" width="86" height="10" rx="5" fill="#4b525f"/>
   <rect x="-36" y="3" width="72" height="5" rx="2.5" fill="#07080b"/>
@@ -130,13 +155,14 @@ function hammerFX(b, done) {
   shadow.style.top = hit.y - 14 + "px";
   // head centre (70,47) of the 140x230 hammer sits on the hit point; the handle runs down toward you
   const h = fxEl("fx-hammer", FX_HAMMER_SVG);
-  h.style.left = hit.x - 70 + "px";
-  h.style.top = hit.y - 47 + "px";
-  const D = 1600;
-  const HITS = [520, 820, 1110];
+  h.style.left = hit.x - 100 + "px";
+  h.style.top = hit.y - 54 + "px";
+  const D = 1760;
+  const HITS = [680, 980, 1270];
   const P = {
     start: "perspective(700px) translateY(360px) rotateX(-40deg) scale(0.9)",
     up: "perspective(700px) translateY(-30px) rotateX(-30deg) scale(1.1)",
+    poised: "perspective(700px) translateY(-44px) rotateX(-36deg) scale(1.13)",
     hit: "perspective(700px) translateY(0) rotateX(6deg) scale(0.86)",
     bounce: "perspective(700px) translateY(-10px) rotateX(-10deg) scale(0.92)",
     gone: "perspective(700px) translateY(340px) rotateX(-40deg) scale(0.88)",
@@ -147,20 +173,21 @@ function hammerFX(b, done) {
   h.animate(
     [
       k(0, "start", 0, "cubic-bezier(.2,.8,.3,1)"),
-      k(340, "up", 1, down),
+      k(330, "up", 1, "ease-in-out"),
+      k(480, "poised", 1, down), // held up high for a beat, ready to smash
       k(HITS[0], "hit", 1, upE),
-      k(680, "up", 1, down),
+      k(840, "up", 1, down),
       k(HITS[1], "hit", 1, upE),
-      k(960, "up", 1, down),
+      k(1130, "up", 1, down),
       k(HITS[2], "hit", 1, upE),
-      k(1230, "bounce", 1, "ease-in"),
+      k(1390, "bounce", 1, "ease-in"),
       k(D, "gone", 0, "linear"),
     ],
     { duration: D, easing: "linear", fill: "forwards" },
   );
   const sk = (t, s, o) => ({ transform: `scale(${s})`, opacity: o, offset: t / D });
   shadow.animate(
-    [sk(0, 1.5, 0), sk(340, 1.25, 0.16), sk(HITS[0], 0.75, 0.45), sk(680, 1.25, 0.16), sk(HITS[1], 0.75, 0.45), sk(960, 1.25, 0.16), sk(HITS[2], 0.75, 0.45), sk(1230, 0.9, 0.3), sk(D, 1.5, 0)],
+    [sk(0, 1.5, 0), sk(480, 1.3, 0.14), sk(HITS[0], 0.75, 0.45), sk(840, 1.25, 0.16), sk(HITS[1], 0.75, 0.45), sk(1130, 1.25, 0.16), sk(HITS[2], 0.75, 0.45), sk(1390, 0.9, 0.3), sk(D, 1.5, 0)],
     { duration: D, easing: "linear", fill: "forwards" },
   );
 
@@ -487,7 +514,8 @@ const FX_ICEWAND_SVG = `<svg viewBox="0 0 120 440" width="120" height="440" styl
   <g stroke="#fff" stroke-width="5" stroke-linecap="round"><path d="M60 22v44M41 33l38 22M41 55l38-22"/></g>
   <g stroke="#fff" stroke-width="3" stroke-linecap="round"><path d="M53 25l7 6 7-6M53 63l7-6 7 6M39 40l9 1-3 8M81 48l-9-1 3-8M39 48l9-1-3-8M81 40l-9 1 3 8"/></g>
   <ellipse cx="47" cy="30" rx="7" ry="4" transform="rotate(-30 47 30)" fill="#fff" opacity="0.8"/>
-  ${fxGlove(60, 200, "f", 0, "#3fb6e8")}
+  ${fxFist(60, 160, 44, -30, "f2", "#3fb6e8")}
+  ${fxFist(60, 230, 54, 28, "f1", "#3fb6e8")}
 </svg>`;
 const FX_FLAKE = `<svg viewBox="-10 -10 20 20" width="100%" height="100%"><g stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M0-9V9M-7.8-4.5 7.8 4.5M-7.8 4.5 7.8-4.5M-2.5-7 0-4.5 2.5-7M-2.5 7 0 4.5 2.5 7"/></g></svg>`;
 function freezeFX(ms) {
