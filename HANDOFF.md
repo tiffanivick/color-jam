@@ -1,0 +1,301 @@
+# Color Jam: Master Handoff & Implementation Spec
+
+Audience: an LLM coding agent (Claude Code) taking over development.
+Repo: `github.com/tiffanivick/color-jam` (branch `main`), deployed by GitHub Pages at
+`https://tiffanivick.github.io/color-jam/`. Owner plays it as an iPhone home-screen web app.
+Current live build: **36** (`?v=36`).
+
+---
+
+## 0. Correct the assumed stack first
+
+Earlier planning assumed **React + HTML5 Canvas + Node.js backend**. That is **not** what exists.
+Do not scaffold React, Canvas or a server. The actual stack:
+
+| Layer | Reality |
+|---|---|
+| Frontend | Vanilla JS (no framework, no bundler, no npm deps), plain `<script>` tags in `index.html` |
+| Rendering | **DOM + inline SVG + CSS**. Blocks are absolutely positioned `div`s; their 3D look is an SVG built by `src/brick.js`. No `<canvas>`, no `ctx.save/translate/rotate` anywhere. |
+| Animation | CSS transitions + Web Animations API (`el.animate`) + `requestAnimationFrame` |
+| Backend | **None.** Static files on GitHub Pages. Save data in `localStorage`. |
+| Offline | `sw.js` service worker, network-first, `cache: "no-store"` |
+| Level tooling | Python 3 (BFS solver/generators in `tools/`), Playwright + Chromium for visual tests |
+
+Every requirement below that mentions Canvas transforms must be implemented with the DOM equivalents:
+CSS `transform` (`translate/rotate/scale`, `transform-origin`) and WAAPI keyframes, **or** pre-rendered
+3D sprites (see §3.6). Introducing a `<canvas>` overlay just for the tools is acceptable only if it
+stays in the board's coordinate system (see §3.3).
+
+---
+
+## 1. Project overview
+
+"Color Jam" is a personal clone of the mobile game *Color Block Jam*: a sliding-block puzzle.
+Multi-cell coloured blocks sit on a grid surrounded by coloured gates. Drag a block; when it is pushed
+fully against a gate of its own colour (and fits the gate's span), it slides out. Clear every block
+before the clock runs out.
+
+Content: 80 hand-verified levels in `levels.json` across 8 themed worlds (`src/worlds.js`): Sunny Meadow,
+Frostbite Peak, Candy Cove, Ember Forge, Starlight Station, Coral Reef, Golden Dunes, Sunset Skies.
+Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rush mode, per-world picture.
+
+### File map
+
+| File | Responsibility |
+|---|---|
+| `index.html` | Markup and script order: `sound.js, worlds.js, brick.js, engine.js, fx.js, app.js`, all `?v=N` |
+| `src/engine.js` | Board, blocks, drag physics, movement rules, gates/exits, themed mechanics, bombs |
+| `src/brick.js` | SVG "realistic" block body: rounded outline across cells, gradients, studs, rim |
+| `src/fx.js` | **Power-up visuals and aiming**: hammer, vacuum, freeze, tool aiming/tracking |
+| `src/app.js` | Game state and save, level flow, timer, boosters, win/lose, shop, quests, trophies, UI sheets |
+| `src/sound.js` | WebAudio synth SFX (`Sfx.smash(n)`, `Sfx.suck()`, `Sfx.freeze()`, `Sfx.pop()`, …) |
+| `src/worlds.js` | World themes: colours, backgrounds, and which mechanics each world introduces |
+| `style.css` | All styling; `.skin-real` = realistic blocks; `.fx-*` = power-up effects |
+| `sw.js` | Service worker |
+| `t1/`, `t2/` | Alternate layout test pages; must get the same `?v=` bump |
+| `tools/solver3.py` | BFS solver implementing every rule (used to verify all levels) |
+| `tools/*.py` | Level generators/augmenters/repairers |
+| `tools/tests/` | Playwright harnesses (see §4.4) |
+| `tools/r3d/` | **In-progress** ray-marched 3D sprite renderer for the tools (see §3.6) |
+
+---
+
+## 2. Core mechanics & rules
+
+### 2.1 Grid
+- Per-level `rows × cols` (typically 6×7 … 7×6). Constants in `engine.js`: `CELL = 48`, `GAP = 6`,
+  `STEP = 54` (cell pitch), `PADDING = 0`, `BORDER = 14`.
+- Board-local pixel position of cell `(r, c)`: `x = PADDING + c*STEP`, `y = PADDING + r*STEP`.
+  The board may be CSS-scaled to fit the phone: convert pointer coordinates with
+  `k = rect.width / boardEl.offsetWidth` (see `boardPoint(e)` in `fx.js`).
+- Fixed features: `walls` (tree stumps, impassable), `lava` (pass through, cannot stop on).
+
+### 2.2 Blocks ("clusters")
+- A block is one rigid polyomino: `{ color, cells: [[r,c],…], id, …flags }`. It moves as a unit.
+  Blocks never merge or split. Each block is one `.block-group` element containing `.block-cell` divs
+  (for hit-testing) plus the SVG body from `brick.js`.
+- Dragging: `computeReachable(block)` floods every square-aligned offset reachable through empty space.
+  The drag follows the pointer inside that set, and `endDrag()` snaps to the nearest legal resting spot.
+- Exiting: `findExit()` checks for a gate of the block's colour on the side it is moving toward, and that
+  **all** of its cells fit inside the gate's span. `exitPathClear()` stops a block from passing through
+  other blocks on the way out.
+- Flags / themed kinds:
+  - `ice: n`: frozen until `n` other blocks leave.
+  - `axis`: slides along its arrow only.
+  - `crate`: tap twice to smash; may drop a power-up.
+  - `gray`: has no gate; it is an obstacle you shove aside.
+  - `lockBy`: chained until the key block leaves.
+  - `bomb: n`: fuse in seconds, `bombSeconds(n) = max(20, round(n*7.5/5)*5)`. It burns in real time
+    while the clock runs (`burnFuses(dt)`); reaching 0 loses the level.
+  - `jelly`: moves one square per drag.
+  - `comet`: only flies straight to the end of a line. It cannot stop mid-line; another block or
+    feature must be placed to stop it.
+  - `bubble`: floats up one square after every move.
+  - `pillar`: blocks the way, crumbles after N moves.
+  - `rainbow`: may use any gate.
+- Every level is verified solvable by `tools/solver3.py` (BFS over full board state, all rules,
+  bombs as a move-count proxy). **Any engine rule change must be mirrored in the solver, and all
+  80 levels re-verified.**
+
+### 2.3 Win / loss
+- **Win:** every block that `isNeeded(b)` (not gray, crate or pillar) has left or been removed.
+  `checkWin()` in `app.js`. Removal by power-up counts. The win check is deferred until power-up
+  animations finish (`fxBusy` counter and `done` callbacks).
+- **Loss:** the level timer reaches 0 (`timeUp()`, with a continue offer for coins), or a bomb fuse
+  reaches 0.
+- Timer: starts on the first move (`startTimer`). Freeze pauses it for 10 s.
+- Stars: `starsFor(moves, par)`: 3 if `moves ≤ par`, 2 if `≤ par+2`, otherwise 1.
+
+### 2.4 Power-ups (logic, unchanged and working)
+- Inventory `S.inv = {undo, hammer, freeze, vacuum}`. Prices: undo 20, hammer 40, freeze 30, vacuum 80.
+- All four are **locked until the first move starts the timer** (`lockedUntilStart`, `updateBoosters`).
+- **Undo:** restores the previous snapshot.
+- **Freeze:** `freezeUntil = now + 10000`, then calls `freezeFX(10000)`.
+- **Hammer:** removes the one targeted block → `hammerFX(b, finish)`.
+- **Vacuum:** removes the targeted block **and every other block of the same colour** (nearest first),
+  not neighbours. Then `vacuumFX(group, finish)`.
+- Tool arming: `setTool(mode)` in `app.js` sets `toolMode`/`blastMode` and calls `toolAimShow(mode)`.
+  The actual use goes through `blast(b)`.
+
+---
+
+## 3. Power-up visual spec (CRITICAL)
+
+### 3.1 Status
+**The hammer and vacuum visuals are still wrong per the owner.** Rejected iterations, all live at some point:
+1. Toy hammer swinging in from the side.
+2. Cartoon gloved hands or arms holding the tools.
+3. Flat side-profile "T" mallet (horizontal log on a vertical handle) that glides up.
+4. Top-down round "stamp" or "coin" (build 36, currently live). **Rejected:** it reads as a flat disc.
+
+The owner wants the tools to look like the **3D, isometric, chunky** tools in *Color Block Jam*.
+The current code in `src/fx.js` uses hand-drawn SVG strings (`FX_HAMMER_SVG`, `FX_NOZZLE_SVG`).
+Flat SVG cannot meet the spec. Replace the art; keep the plumbing.
+
+### 3.2 Hard requirements (both tools)
+- R1. **No hands, arms, gloves or characters.** The tool is an isolated asset. (All hand code is
+  already removed.)
+- R2. **True 3D read.** Visible top, side and face planes with real shading: gradients, specular
+  highlights, ambient occlusion, layered caps and sides. No flat circles, no side profiles.
+- R3. **Isometric / high-angle orthographic camera**, matching the board's implied viewpoint.
+- R4. The tool is **anchored to the pointer** (touch or mouse) and tracks it every move. The player's
+  finger is the end of the handle; the head is drawn at a fixed offset above the finger so the finger
+  does not hide it. The target is the block whose cell is under the **head's strike point**.
+- R5. A **drop shadow** on the board under the head shows height. It is bigger and fainter when
+  raised, tighter and darker at contact.
+- R6. **Hover scale ≈ 1.2×** while floating over the target.
+- R7. Do not slide tools in from the bottom of the screen during use. They appear at the pointer.
+  (They may rest at bottom-centre while armed and untouched.)
+
+### 3.3 Hammer
+- Head: a **chunky wooden 3D cylinder** with gold bands, end-grain cap and a visible barrel side.
+  At hover it is **tilted diagonally ~45° down toward the board**, so the barrel side dominates and the
+  striking face is angled at the target.
+- Handle: attaches to the **side of the cylinder** and runs **down and back off-screen toward the
+  player**, foreshortened, diagonally to the lower right in the current draft. It never ends visibly
+  on the board; it must exit the screen edge.
+- Smash cycle (per strike, 3 strikes, then break):
+  1. Hover: raised pose, scale 1.2, shadow wide and faint.
+  2. Strike (~110 ms, ease-in): **rotate about the handle/pivot axis** so the face comes down flat onto
+     the block. Scale 1.2 → 1.0, with a slight squash (`scale(1.07, 0.93)`) on contact.
+  3. Contact: block squash (`el.animate` scaleY ~0.9), cracks grow (`.fx-crack` scale 0.5, 0.8, 1.1),
+     board shake, `burst()` particles, `Sfx.smash(n)`.
+  4. Pull back (~150 ms) to the hover pose.
+  5. After the 3rd strike: break the block into ~9 wedge fragments. Keep the existing implementation:
+     clip-path polygons over `el.cloneNode(true)`; hide the original with **`opacity: 0`, not
+     `visibility`**, because the clones reference its SVG clipPath ids. Then fade the hammer and
+     call `done()`.
+- Strike point = the head-centre projection at the contact pose. The sprite's anchor must be defined in
+  sprite pixel space and placed so this point lands exactly on the aimed cell.
+
+### 3.4 Vacuum
+- Nozzle: a **thick rectangular 3D block** (glossy blue floor head with red and orange buttons on top),
+  **tilted slightly forward** so its top face **and** its front suction mouth (dark slot) are both visible.
+- Hose: a silver ribbed hose from the **centre** of the nozzle, running **straight down the screen**
+  and off the bottom edge.
+- Cycle:
+  1. Hover at the pointer: scale 1.2, shadow wide.
+  2. On release over a block: **lower** to scale 1.0 while staying tilted forward, and settle; the
+     shadow tightens.
+  3. Hum: tiny jitter loop.
+  4. Suck each block of the target colour in turn (stagger 300 ms). Keep the current block animation:
+     tremble, stretch, then shrink to the mouth with `transformOrigin` at the mouth over ~760 ms; the
+     block element is moved into `boardEl` at z-index 33, under the nozzle.
+  5. Air and dust streaks converge on the mouth; gold sparkles pop.
+  6. A lump in the block's colour travels down the hose and off-screen.
+  7. The nozzle lifts and leaves, then call `done()`.
+
+### 3.5 Freeze (lower priority)
+No target. An ice wand rises, bursts snowflakes, and `.fx-frost` covers the board for the freeze
+duration. No hands (already removed). Keep it vertical (no tilt). Restyle to the same 3D standard
+after the hammer and vacuum are accepted.
+
+### 3.6 Recommended approach: pre-rendered 3D sprites (started, not integrated)
+npm and CDNs are blocked in the original environment, so three.js could not be installed. A
+dependency-free **WebGL2 SDF ray-marcher** was written instead:
+- `tools/r3d/render.html`: GLSL scene. Uniforms:
+  - `tool` (0 hammer, 1 vacuum)
+  - `ang` (hammer swing about the hand pivot; vacuum forward tilt)
+  - `yaw` (handle direction)
+  - `elev` (camera elevation, 0.62 rad ≈ 35°)
+  - `S` (px per board square)
+  - `org` (pixel where world origin = strike point lands)
+- `tools/r3d/shoot.py`: renders frame lists through Playwright/Chromium (swiftshader works), 2×
+  supersampled, into a horizontal sprite sheet. Example:
+
+  ```
+  cd tools/r3d && python3 -m http.server 8799 &
+  python3 shoot.py '{"base":{"w":816,"h":960,"ox":168,"oy":264,"S":96,"elev":0.62,"tool":0,"yaw":-0.5},
+    "frames":[{"ang":-0.5},{"ang":-0.42},{"ang":-0.33},{"ang":-0.24},{"ang":-0.15},{"ang":-0.07},{"ang":0}],
+    "out":"hammer_sheet.png"}'
+  ```
+
+- Drafts: `tools/r3d/hammer_sheet_draft.png` (7 frames, raised → contact, 816×960 each, strike point
+  at px (168,264), S=96 = 2× device pixels per square) and `tools/r3d/vacuum_draft.png`
+  (336×1100, mouth at (168,130)).
+- These drafts already show real 3D shading. **They have not yet been reviewed by the owner.**
+  Tune them with the owner before integrating:
+  - The raised frames still show a lot of the end cap. Increase the barrel-side read (camera elevation,
+    head length, yaw) so it never looks like a coin.
+  - Possibly shorten the red grip.
+  - Make the vacuum's front mouth clearer.
+
+Integration plan:
+1. Export the sheets as WebP (iOS Safari supports it) into `img/`. Keep the files small.
+2. Hammer element: `div.fx-hammer3d` sized to one frame in CSS px (frame px / 2), with
+   `background: url(img/hammer.webp) 0 0 / (N*W)px H px`. Step frames by setting
+   `background-position-x` from a `requestAnimationFrame` timeline (raised → contact → raised, ×3).
+   Combine with `transform: scale()` about the strike-point `transform-origin`.
+3. Vacuum element: a single sprite and the same anchoring.
+4. Feed both into the existing `TOOL` table in `fx.js` (`g: {hx, hy, gx, gy}` = strike point and
+   finger point in sprite CSS px).
+
+Alternative if the owner supplies art: they offered to provide **pre-rendered 2D isometric sprites**.
+The same sprite-sheet integration applies.
+
+### 3.7 Existing plumbing to keep (`src/fx.js`)
+- `TOOL` table, `toolAimShow(mode)`, `toolAimPlace(x,y,lifted)`, `toolAimRest()`, `toolAimFinger(e)`:
+  - Window-level **capture-phase** `pointerdown/move/up/cancel` listeners. While a tool is armed they
+    stop propagation so the engine's block drag never fires.
+  - On `pointerup` over a target: `window.__toolFrom = {x,y}` (the head point), then
+    `toolAimShow(null)`, then `blast(b)`. `hammerFX`/`vacuumFX` read `__toolFrom` so the animation
+    starts exactly where the aim sprite was.
+  - On release over an empty spot: go back to the rest state, still armed.
+  - The target block gets `.aim-target` (a glow).
+- `fxBusy`: counter; the win check waits for it to finish.
+- `fxRect(b)` and `fxSpot(b)`: block box and best hit point in board px.
+- `window.__FXK`: test-only time multiplier for rAF-driven timelines (slow-motion captures).
+
+---
+
+## 4. Immediate next steps for Claude Code
+
+### 4.1 Scan first (do not assume Canvas or React)
+1. `git pull`, then read `index.html` (script order, `?v=`), `src/fx.js` (entire), the `blast()`,
+   `setTool()`, `checkWin()` and `startTimer()` sections of `src/app.js`, and `setupDrag()`,
+   `endDrag()` and `tryStep()` in `src/engine.js`.
+2. Confirm that the "game loop" is event-driven DOM: drag rAF `glide()` in `engine.js`, the timer
+   `tick()` rAF in `app.js`, and per-effect rAF/WAAPI in `fx.js`. There is no central render loop to
+   patch.
+
+### 4.2 Fix tool orientation and art without breaking anchoring
+1. Replace `FX_HAMMER_SVG` and `FX_NOZZLE_SVG` usage with 3D sprite elements (§3.6). Update
+   `TOOL.*.g` anchors to the new sprite geometry.
+2. Rewrite the pose and keyframe sections of `hammerFX` and `vacuumFX` to the cycles in §3.3 and §3.4:
+   - Hammer: frame-stepped rotation raised → contact plus scale 1.2 → 1.0 with a squash, ×3.
+   - Vacuum: scale 1.2 → 1.0 while tilted.
+3. Keep the CSS transform-origin at the strike point, so scaling never moves the hit location off the
+   aimed cell.
+4. Invariants:
+   - Pointer-to-board conversion via `boardPoint(e)`, including the CSS scale factor.
+   - Target = block containing the cell under the head point.
+   - `__toolFrom` handoff.
+   - Win only after `done()`.
+
+### 4.3 Verify
+- Owner sign-off is required on stills before shipping: render hover, contact and break frames.
+- `tools/tests/aimtest.py <Hammer|Vac> out.png`: arms the tool, touches below a target, drags, releases,
+  and captures slow-motion frames. Adjust its finger offset (`+92*k` / `+120*k`) to the new anchor offset.
+- `tools/tests/wintest.py`: the level must not count as won until the animation finishes (`fxBusy` → 0,
+  then `levelOver`).
+- `tools/tests/fxframes_slow.py`: generic slow-motion frame grabber (6× via patched timers and WAAPI).
+- The harnesses expect a static server on **port 8792 serving the repo root**. Some scripts contain
+  absolute paths from the old workspace (`/home/claude/v3`, `/tmp`); fix those paths before use.
+- Level integrity (only if engine rules change): run `tools/solver3.py` over `levels.json`; all 80 must
+  solve. Replay harness: `tools/tests/gp4.py` + `replay4.py`/`replay4.js`.
+
+### 4.4 Deploy
+1. Bump `?v=N` everywhere in `index.html`, `t1/index.html` and `t2/index.html` (37 next).
+2. Commit and push to `main`. GitHub Pages serves within ~10 min.
+3. The owner verifies on the phone by fully closing and reopening the home-screen app, then checking the
+   build label (tap it for diagnostics).
+
+### 4.5 Constraints and gotchas
+- iPhone home-screen layout: the manifest `<link>` is intentionally **absent** (it made iOS use a short
+  812 px window). Keep the `vp-short` class and `--safe-b` handling. No auto-reload.
+- `.skin-real` CSS specificity is fragile. Old high-specificity rules caused seams; check blocks after
+  any CSS change.
+- `brick.js` inner corners: gap-crossing only when `R && D && RD` (prevents notches).
+- Hide broken blocks with `opacity: 0`, not `visibility` (clip-path id references).
+- Do not commit level-generation logs or `__pycache__`.
+- Keep commit-message attribution lines as the repo history shows.

@@ -1,0 +1,143 @@
+<!doctype html>
+<html><body style="margin:0;background:#888">
+<canvas id="c"></canvas>
+<script>
+// A tiny ray-marched 3D renderer for the power-up sprites (no libraries).
+// World units = board squares. The board is the plane y = 0; the player sits toward +z.
+const VS = `#version 300 es
+in vec2 p; void main(){ gl_Position = vec4(p,0.,1.); }`;
+const FS = `#version 300 es
+precision highp float;
+out vec4 o;
+uniform vec2 res;      // canvas size in px
+uniform vec2 org;      // where world (0,0,0) lands, in px from top-left
+uniform float S;       // px per unit
+uniform float elev;    // camera elevation (radians)
+uniform int tool;      // 0 hammer, 1 vacuum
+uniform float ang;     // hammer swing (radians, 0 = face flat on the board)
+
+mat3 rotX(float a){ float c=cos(a), s=sin(a); return mat3(1.,0.,0., 0.,c,s, 0.,-s,c); }
+float sdCyl(vec3 p, float r, float h, float e){ // axis y, rounded edge e
+  vec2 d = vec2(length(p.xz)-r+e, abs(p.y)-h+e);
+  return min(max(d.x,d.y),0.) + length(max(d,0.)) - e; }
+float sdCap(vec3 p, vec3 a, vec3 b, float r){ vec3 pa=p-a, ba=b-a; float h=clamp(dot(pa,ba)/dot(ba,ba),0.,1.); return length(pa-ba*h)-r; }
+float sdRBox(vec3 p, vec3 b, float r){ vec3 q=abs(p)-b+r; return length(max(q,0.))+min(max(q.x,max(q.y,q.z)),0.)-r; }
+float sdTorusY(vec3 p, float R, float r){ vec2 q=vec2(length(p.xz)-R,p.y); return length(q)-r; }
+
+// ---- hammer ----
+const float PZ = 5.2;   // the pivot (your hands) far down the handle
+uniform float yaw;     // the handle comes in from the lower right
+mat3 rotY(float a){ float c=cos(a), s=sin(a); return mat3(c,0.,-s, 0.,1.,0., s,0.,c); }
+vec3 hamLocal(vec3 p){ // world -> hammer (strike pose) space
+  p = rotY(yaw) * p;
+  vec3 q = p - vec3(0.,0.55,PZ);
+  q = rotX(ang) * q;
+  return q + vec3(0.,0.55,PZ); }
+vec2 hammer(vec3 p){
+  vec3 q = hamLocal(p);
+  vec3 h = q - vec3(0.,0.62,0.);
+  float head = sdCyl(h, 0.72, 0.62, 0.16);
+  vec2 r = vec2(head, 1.);
+  float band = min(sdTorusY(h-vec3(0.,0.4,0.), 0.72, 0.055), sdTorusY(h-vec3(0.,-0.4,0.), 0.72, 0.055));
+  if (band < r.x) r = vec2(band, 3.);
+  float handle = sdCap(q, vec3(0.,0.55,0.5), vec3(0.,0.55,PZ+9.), 0.15);
+  if (handle < r.x) r = vec2(handle, 4.);
+  float collar = sdCap(q, vec3(0.,0.55,0.66), vec3(0.,0.55,0.86), 0.2);
+  if (collar < r.x) r = vec2(collar, 3.);
+  float grip = sdCap(q, vec3(0.,0.55,3.4), vec3(0.,0.55,PZ+9.), 0.18);
+  if (grip < r.x) r = vec2(grip, 5.);
+  return r; }
+
+// ---- vacuum floor head ----
+vec2 vacuum(vec3 p){
+  vec3 q = rotX(ang) * (p - vec3(0.,0.36,0.)); // tilted forward: top and mouth both show
+  float body = sdRBox(q, vec3(1.25,0.26,0.46), 0.16);
+  // the suction mouth, cut into the front face
+  float slot = sdRBox(q-vec3(0.,-0.02,0.5), vec3(0.98,0.1,0.14), 0.06);
+  vec2 r = vec2(max(body,-slot), 6.);
+  float mouth = sdRBox(q-vec3(0.,-0.02,0.34), vec3(0.96,0.08,0.03), 0.03);
+  if (mouth < r.x) r = vec2(mouth, 7.);
+  float stripe = sdRBox(q-vec3(-0.25,0.25,-0.12), vec3(0.7,0.03,0.07), 0.03);
+  if (stripe < r.x) r = vec2(stripe, 9.);
+  float b1 = length(q-vec3(0.72,0.27,-0.14))-0.1, b2 = length(q-vec3(0.95,0.27,-0.14))-0.1;
+  if (b1 < r.x) r = vec2(b1, 10.);
+  if (b2 < r.x) r = vec2(b2, 11.);
+  // chrome neck + ribbed hose from the middle of the head, back toward you (down the screen)
+  float neck = sdCap(q, vec3(0.,0.12,0.25), vec3(0.,0.2,0.95), 0.25);
+  if (neck < r.x) r = vec2(neck, 3.5);
+  vec3 hp = p - vec3(0.,0.5,0.);
+  float t = clamp(hp.z, 0.9, 40.);
+  float rib = 0.24 + 0.022*smoothstep(-0.2,0.6,sin(hp.z*24.));
+  float hose = length(hp - vec3(0.,0.,t)) - rib;
+  hose = max(hose, 0.9-hp.z);
+  if (hose*0.7 < r.x) r = vec2(hose*0.7, 8.);
+  return r; }
+
+vec2 map(vec3 p){ return tool==0 ? hammer(p) : vacuum(p); }
+vec3 nrm(vec3 p){ vec2 e=vec2(0.0015,0.); return normalize(vec3(map(p+e.xyy).x-map(p-e.xyy).x, map(p+e.yxy).x-map(p-e.yxy).x, map(p+e.yyx).x-map(p-e.yyx).x)); }
+float ao(vec3 p, vec3 n){ float a=0., s=1.; for(int i=1;i<=5;i++){ float h=0.04*float(i); a+=(h-map(p+n*h).x)*s; s*=0.6; } return clamp(1.-2.2*a,0.,1.); }
+float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
+float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f); return mix(mix(hash(i),hash(i+vec2(1,0)),f.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x), f.y); }
+
+vec3 sky(vec3 r){ return mix(vec3(0.95,0.85,0.75), vec3(0.75,0.88,1.0), clamp(r.y*0.5+0.5,0.,1.)) * (0.9+0.3*smoothstep(0.6,1.,r.y)); }
+
+void main(){
+  vec2 px = vec2(gl_FragCoord.x, res.y-gl_FragCoord.y);
+  vec2 uv = (px - org) / S;                       // units, y down the screen
+  vec3 fwd = normalize(vec3(0., -sin(elev), -cos(elev)));
+  vec3 rgt = vec3(1.,0.,0.);
+  vec3 upv = normalize(cross(rgt, fwd)) * -1.;    // screen up
+  upv = normalize(vec3(0., cos(elev), -sin(elev)));
+  vec3 ro = uv.x*rgt - uv.y*upv - fwd*30.;
+  float t = 0.; vec2 h; bool hit=false;
+  for(int i=0;i<220;i++){ h = map(ro+fwd*t); if(h.x<0.0008){hit=true;break;} t += h.x; if(t>60.) break; }
+  if(!hit){ o = vec4(0.); return; }
+  vec3 p = ro+fwd*t, n = nrm(p), v = -fwd;
+  float m = h.y;
+  vec3 col; float spec=0.4, gloss=40., metal=0.;
+  if (m==1.) { // wood head: grain along the barrel, rings on the flat ends
+    vec3 q = hamLocal(p) - vec3(0.,0.62,0.);
+    float endf = smoothstep(0.45,0.58,abs(q.y));
+    float g = noise(vec2(atan(q.z,q.x)*9., q.y*1.5))*0.6 + 0.4*sin(atan(q.z,q.x)*40.+noise(q.xy*6.)*4.);
+    vec3 side = mix(vec3(0.74,0.44,0.2), vec3(0.95,0.7,0.4), g*0.5+0.5);
+    float rr = length(q.xz); float ring = 0.5+0.5*sin(rr*55.+noise(q.xz*8.)*3.);
+    vec3 endc = mix(vec3(0.86,0.6,0.34), vec3(0.72,0.45,0.22), ring*0.45);
+    col = mix(side, endc, endf); spec=0.35; gloss=30.;
+  } else if (m==3. || m==3.5) { col = m==3. ? vec3(1.0,0.78,0.3) : vec3(0.85,0.88,0.93); metal=1.; spec=1.; gloss=80.; }
+  else if (m==4.) { vec3 q=hamLocal(p); col = mix(vec3(0.86,0.6,0.34), vec3(0.95,0.74,0.48), noise(vec2(q.z*3., atan(q.y-0.55,q.x)*5.))); spec=0.3; gloss=30.; }
+  else if (m==5.) { vec3 q=hamLocal(p); col = vec3(0.9,0.18,0.24)*(0.85+0.15*smoothstep(-0.3,0.3,sin(q.z*30.))); spec=0.7; gloss=60.; }
+  else if (m==6.) { col = vec3(0.2,0.5,0.98); spec=0.9; gloss=90.; }
+  else if (m==7.) { col = vec3(0.05,0.05,0.08); spec=0.2; gloss=20.; }
+  else if (m==8.) { col = vec3(0.8,0.83,0.88); metal=0.7; spec=0.9; gloss=60.; }
+  else if (m==9.) { col = vec3(0.55,0.8,1.0); spec=0.9; gloss=90.; }
+  else if (m==10.) { col = vec3(1.0,0.3,0.4); spec=0.9; gloss=90.; }
+  else { col = vec3(1.0,0.7,0.15); spec=0.9; gloss=90.; }
+  vec3 L = normalize(vec3(-0.55, 1.0, 0.75));
+  float dif = max(dot(n,L),0.);
+  float a = ao(p,n);
+  vec3 hlf = normalize(L+v);
+  float sp = pow(max(dot(n,hlf),0.), gloss) * spec;
+  float fre = pow(1.-max(dot(n,v),0.), 3.);
+  vec3 amb = mix(vec3(0.42,0.36,0.34), vec3(0.62,0.7,0.85), n.y*0.5+0.5);
+  vec3 c;
+  if (metal>0.) { vec3 r=reflect(-v,n); c = col*(sky(r)*0.75 + dif*0.55)*a + sp*vec3(1.) ; }
+  else c = col*(amb*a*0.85 + dif*0.75) + sp*vec3(1.) + fre*0.18*sky(n);
+  c = pow(c, vec3(0.95));
+  o = vec4(clamp(c,0.,1.), 1.);
+}`;
+const cv = document.getElementById("c");
+const gl = cv.getContext("webgl2", { preserveDrawingBuffer: true, premultipliedAlpha: false, antialias: false });
+function sh(t, s) { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) throw gl.getShaderInfoLog(x); return x; }
+const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr); gl.useProgram(pr);
+const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+const loc = gl.getAttribLocation(pr, "p"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+const U = (n) => gl.getUniformLocation(pr, n);
+// render one frame; supersampled by drawing big and letting the page scale it down later
+window.renderFrame = (o) => {
+  cv.width = o.w; cv.height = o.h; gl.viewport(0, 0, o.w, o.h);
+  gl.uniform2f(U("res"), o.w, o.h); gl.uniform2f(U("org"), o.ox, o.oy); gl.uniform1f(U("S"), o.S);
+  gl.uniform1f(U("elev"), o.elev); gl.uniform1i(U("tool"), o.tool); gl.uniform1f(U("ang"), o.ang || 0); gl.uniform1f(U("yaw"), o.yaw || 0);
+  gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  return cv.toDataURL("image/png");
+};
+</script></body></html>
