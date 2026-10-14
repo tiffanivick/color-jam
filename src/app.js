@@ -744,6 +744,7 @@ function loadLevel(idx) {
   undoStack = [];
   blastMode = false;
   toolMode = null;
+  hammerAimShow(false);
   levelOver = false;
   usedPower = false;
   combo = 0;
@@ -827,6 +828,7 @@ function timeUp() {
   if (levelOver) return;
   levelOver = true;
   blastMode = false;
+  hammerAimShow(false);
   boardEl.classList.remove("blast-mode", "vac-mode");
   Sfx.error();
   const canBuy = S.coins >= CONTINUE_COST;
@@ -1063,6 +1065,7 @@ function setTool(mode) {
   blastMode = !!mode;
   boardEl.classList.toggle("blast-mode", mode === "hammer");
   boardEl.classList.toggle("vac-mode", mode === "vacuum");
+  toolAimShow(mode);
   updateBoosters();
 }
 $("boosterUndo").addEventListener("click", () => {
