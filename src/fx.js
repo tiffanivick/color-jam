@@ -12,32 +12,30 @@
 // the head is at the top, the handle runs straight down to your finger. Your finger IS the
 // handle — the tool follows it directly, with the head a fixed distance above it.
 
-// Hammer, 180x180. Head centre (the point it strikes) at 90,46; the end of the handle (your
-// finger) at 90,172.
-const HAM = { w: 180, h: 180, hx: 90, hy: 46, gx: 90, gy: 172 };
-const FX_HAMMER_SVG = `<svg viewBox="0 0 180 180" width="180" height="180" style="overflow:visible" aria-hidden="true">
+// Hammer, 120x120, seen from straight above like a stamp: you look down on the back of the
+// round mallet head (its striking face is underneath, flat against the board) and the short
+// handle points up out of the screen at you. Head centre 60,58; your finger sits below it.
+const HAM = { w: 120, h: 120, hx: 60, hy: 58, gx: 60, gy: 150 };
+const FX_HAMMER_SVG = `<svg viewBox="0 0 120 120" width="120" height="120" style="overflow:visible" aria-hidden="true">
   <defs>
-    <linearGradient id="fxm-hd" x1="0" x2="1"><stop offset="0" stop-color="#7a451c"/><stop offset="0.35" stop-color="#e9b877"/><stop offset="0.6" stop-color="#d49a5a"/><stop offset="1" stop-color="#6e3d17"/></linearGradient>
-    <linearGradient id="fxm-top" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7d9a4"/><stop offset="1" stop-color="#dca469"/></linearGradient>
-    <linearGradient id="fxm-front" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9783d"/><stop offset="1" stop-color="#7a451c"/></linearGradient>
-    <linearGradient id="fxm-cap" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffeaa8"/><stop offset="0.45" stop-color="#e2b04a"/><stop offset="1" stop-color="#8f6418"/></linearGradient>
-    <linearGradient id="fxm-grip" x1="0" x2="1"><stop offset="0" stop-color="#a81f2e"/><stop offset="0.4" stop-color="#ff6b78"/><stop offset="1" stop-color="#8e1826"/></linearGradient>
+    <linearGradient id="fxm-side" x1="0" x2="1"><stop offset="0" stop-color="#6e3d17"/><stop offset="0.3" stop-color="#c98a4c"/><stop offset="0.5" stop-color="#e7b677"/><stop offset="0.75" stop-color="#b9783d"/><stop offset="1" stop-color="#5e3412"/></linearGradient>
+    <radialGradient id="fxm-top" cx="0.42" cy="0.36" r="0.72"><stop offset="0" stop-color="#fbe3b6"/><stop offset="0.6" stop-color="#e3b073"/><stop offset="1" stop-color="#b47439"/></radialGradient>
+    <linearGradient id="fxm-rim" x1="0" x2="1"><stop offset="0" stop-color="#8f6418"/><stop offset="0.4" stop-color="#ffe9a8"/><stop offset="1" stop-color="#8f6418"/></linearGradient>
+    <linearGradient id="fxm-hd" x1="0" x2="1"><stop offset="0" stop-color="#8e1826"/><stop offset="0.4" stop-color="#ff6b78"/><stop offset="1" stop-color="#7a1220"/></linearGradient>
+    <radialGradient id="fxm-cap" cx="0.4" cy="0.35" r="0.7"><stop offset="0" stop-color="#ffb3ba"/><stop offset="0.6" stop-color="#ef4656"/><stop offset="1" stop-color="#a81f2e"/></radialGradient>
   </defs>
-  <!-- handle, straight down to your finger -->
-  <rect x="80" y="66" width="20" height="110" rx="7" fill="url(#fxm-hd)" stroke="#5e3412" stroke-width="2"/>
-  <rect x="78" y="128" width="24" height="48" rx="9" fill="url(#fxm-grip)" stroke="#6e1220" stroke-width="2"/>
-  <path d="M80 140h20M80 152h20M80 164h20" stroke="#6e1220" stroke-width="1.6" opacity="0.5"/>
-  <rect x="85" y="72" width="4" height="52" rx="2" fill="#fff" opacity="0.35"/>
-  <!-- head: a chunky wooden mallet, lying flat across the top of the handle -->
-  <rect x="16" y="34" width="148" height="44" rx="14" fill="url(#fxm-front)" stroke="#5e3412" stroke-width="2.5"/>
-  <rect x="16" y="12" width="148" height="46" rx="18" fill="url(#fxm-top)" stroke="#5e3412" stroke-width="2.5"/>
-  <path d="M30 26c26-5 50 4 78-1s34-2 46 1M30 44c24 4 48-4 76 1s38 3 48-1" fill="none" stroke="#a8692f" stroke-width="1.8" opacity="0.5"/>
-  <rect x="8" y="10" width="22" height="66" rx="9" fill="url(#fxm-cap)" stroke="#7a5512" stroke-width="2"/>
-  <rect x="150" y="10" width="22" height="66" rx="9" fill="url(#fxm-cap)" stroke="#7a5512" stroke-width="2"/>
-  <rect x="8" y="10" width="22" height="40" rx="9" fill="#fff" opacity="0.22"/>
-  <rect x="150" y="10" width="22" height="40" rx="9" fill="#fff" opacity="0.22"/>
-  <rect x="44" y="18" width="92" height="9" rx="4.5" fill="#fff" opacity="0.45"/>
-  <ellipse cx="90" cy="78" rx="14" ry="5" fill="#6e3d17"/>
+  <!-- the round head: its side shows a little at the bottom, the gold rim, then its wooden back -->
+  <path d="M16 58v14a44 38 0 0 0 88 0V58Z" fill="url(#fxm-side)" stroke="#4e2a0e" stroke-width="2.5"/>
+  <path d="M16 64a44 38 0 0 0 88 0" fill="none" stroke="url(#fxm-rim)" stroke-width="5"/>
+  <ellipse cx="60" cy="58" rx="44" ry="38" fill="url(#fxm-top)" stroke="#4e2a0e" stroke-width="2.5"/>
+  <ellipse cx="60" cy="58" rx="38" ry="32.5" fill="none" stroke="url(#fxm-rim)" stroke-width="4"/>
+  <g fill="none" stroke="#a8692f" stroke-width="1.5" opacity="0.6"><ellipse cx="60" cy="58" rx="27" ry="23"/><ellipse cx="60" cy="58" rx="17" ry="14.5"/></g>
+  <ellipse cx="44" cy="40" rx="15" ry="7" transform="rotate(-25 44 40)" fill="#fff" opacity="0.45"/>
+  <!-- the handle, coming up out of the head toward you (foreshortened) -->
+  <ellipse cx="62" cy="64" rx="15" ry="12" fill="#000" opacity="0.22"/>
+  <path d="M49 58v12a11 9 0 0 0 22 0V58Z" fill="url(#fxm-hd)" stroke="#5e0e18" stroke-width="2"/>
+  <ellipse cx="60" cy="70" rx="11" ry="9" fill="url(#fxm-cap)" stroke="#5e0e18" stroke-width="2"/>
+  <ellipse cx="57" cy="67" rx="4" ry="2.5" fill="#fff" opacity="0.75"/>
 </svg>`;
 
 // Vacuum, 140x980. The floor head lies flat on the board, centre 70,40; the wand runs straight
@@ -107,44 +105,37 @@ function hammerFX(b, done) {
   window.__toolFrom = null;
   const hit = aimed || fxSpot(b);
   // its shadow on the board: small and dark when the head touches, wide and faint when raised
-  const shadow = fxEl("fx-hshadow");
+  // its shadow on the board: tight and dark when the face touches, bigger and fainter when lifted
+  const shadow = fxEl("fx-rshadow");
   shadow.style.left = hit.x - 46 + "px";
-  shadow.style.top = hit.y - 14 + "px";
+  shadow.style.top = hit.y - 38 + "px";
   const h = fxEl("fx-hammer", FX_HAMMER_SVG);
   h.style.left = hit.x - HAM.hx + "px";
   h.style.top = hit.y - HAM.hy + "px";
-  const D = 1500;
-  const HITS = [420, 720, 1010];
-  // straight up and down only: raised = nearer you (bigger, lifted), struck = flat on the block
-  const P = {
-    start: aimed ? "translate(0, -16px) scale(1.06)" : `translate(0, ${boardEl.clientHeight + 200 - hit.y}px) scale(1.06)`,
-    up: "translate(0, -30px) scale(1.14)",
-    hit: "translate(0, 0) scale(0.95)",
-    bounce: "translate(0, -10px) scale(1)",
-    gone: `translate(0, ${boardEl.clientHeight + 260 - hit.y}px) scale(1.04)`,
-  };
-  const down = "cubic-bezier(.7,0,1,.55)";
-  const upE = "cubic-bezier(.2,.7,.4,1)";
-  const k = (t, pose, op, e) => ({ transform: P[pose], opacity: op, offset: t / D, easing: e });
-  h.animate(
-    [
-      k(0, "start", 1, "cubic-bezier(.3,.7,.4,1)"),
-      k(220, "up", 1, down),
-      k(HITS[0], "hit", 1, upE),
-      k(580, "up", 1, down),
-      k(HITS[1], "hit", 1, upE),
-      k(870, "up", 1, down),
-      k(HITS[2], "hit", 1, upE),
-      k(1130, "bounce", 1, "ease-in"),
-      k(D, "gone", 0, "linear"),
-    ],
-    { duration: D, easing: "linear", fill: "forwards" },
-  );
-  const sk = (t, s, o) => ({ transform: `scale(${s})`, opacity: o, offset: t / D });
-  shadow.animate(
-    [sk(0, 1.3, 0.3), sk(220, 1.3, 0.16), sk(HITS[0], 0.75, 0.45), sk(580, 1.25, 0.16), sk(HITS[1], 0.75, 0.45), sk(870, 1.25, 0.16), sk(HITS[2], 0.75, 0.45), sk(1130, 0.9, 0.3), sk(D, 1.5, 0)],
-    { duration: D, easing: "linear", fill: "forwards" },
-  );
+  // no sliding: lifted toward you = 150% size, a strike = a fast drop to 100% with a squash
+  const D = 1400;
+  const HITS = [300, 600, 900];
+  const LIFT = "scale(1.5)";
+  const SQUASH = "scale(1.07, 0.93)";
+  const kf = [{ transform: aimed ? LIFT : "scale(0.3)", opacity: aimed ? 1 : 0, offset: 0 }];
+  if (!aimed) kf.push({ transform: LIFT, opacity: 1, offset: 140 / D, easing: "cubic-bezier(.2,.8,.3,1.3)" });
+  HITS.forEach((t, i) => {
+    kf.push({ transform: LIFT, opacity: 1, offset: (t - 110) / D, easing: "cubic-bezier(.6,0,1,.6)" });
+    kf.push({ transform: SQUASH, opacity: 1, offset: t / D, easing: "ease-out" });
+    kf.push({ transform: "scale(1.02, 0.98)", opacity: 1, offset: (t + 40) / D, easing: "cubic-bezier(.2,.7,.4,1)" });
+    if (i < 2) kf.push({ transform: LIFT, opacity: 1, offset: (t + 150) / D, easing: "linear" });
+  });
+  kf.push({ transform: "scale(1.3)", opacity: 1, offset: 1120 / D, easing: "ease-in" });
+  kf.push({ transform: "scale(1.45)", opacity: 0, offset: 1 });
+  h.animate(kf, { duration: D, easing: "linear", fill: "forwards" });
+  const sh = (t, sx, dx, o) => ({ transform: `translate(${dx}px, ${dx * 0.8}px) scale(${sx})`, opacity: o, offset: t / D });
+  const skf = [sh(0, 1.5, 14, aimed ? 0.25 : 0)];
+  HITS.forEach((t, i) => {
+    skf.push(sh(t - 110, 1.5, 14, 0.25), sh(t, 1, 3, 0.55));
+    if (i < 2) skf.push(sh(t + 150, 1.5, 14, 0.25));
+  });
+  skf.push(sh(1120, 1.35, 11, 0.3), sh(D, 1.45, 13, 0));
+  shadow.animate(skf, { duration: D, easing: "linear", fill: "forwards" });
 
   const crack = document.createElement("div");
   crack.className = "fx-crack";
@@ -264,8 +255,8 @@ function hammerFX(b, done) {
 // finger becomes its handle: it follows your finger directly, head a fixed distance above it,
 // casting a shadow on the block below. Let go over a block to use it there.
 const TOOL = {
-  hammer: { cls: "fx-hammer", svg: () => FX_HAMMER_SVG, g: HAM, sh: "fx-hshadow" },
-  vacuum: { cls: "fx-nozzle", svg: () => FX_NOZZLE_SVG, g: VAC, sh: "fx-vshadow" },
+  hammer: { cls: "fx-hammer", svg: () => FX_HAMMER_SVG, g: HAM, sh: "fx-rshadow", sw: 46, shh: 39, off: 14, scale: 1.5 },
+  vacuum: { cls: "fx-nozzle", svg: () => FX_NOZZLE_SVG, g: VAC, sh: "fx-vshadow", sw: 66, shh: 15, off: 6, scale: 1 },
 };
 let aim = null;
 function boardPoint(e) {
@@ -295,10 +286,11 @@ function toolAimPlace(x, y, lifted) {
   aim.el.style.left = x - g.hx + "px";
   aim.el.style.top = y - g.hy + "px";
   aim.el.classList.toggle("resting", !lifted);
-  const sw = aim.mode === "vacuum" ? 66 : 46;
-  aim.sh.style.left = x - sw + 6 + "px";
-  aim.sh.style.top = y - 14 + 12 + "px";
-  aim.sh.style.opacity = lifted ? "0.6" : "0";
+  const t = aim.t;
+  aim.sh.style.left = x - t.sw + t.off + "px";
+  aim.sh.style.top = y - t.shh + t.off * 0.8 + "px";
+  aim.sh.style.transform = `scale(${t.scale})`;
+  aim.sh.style.opacity = lifted ? (aim.mode === "hammer" ? "0.3" : "0.6") : "0";
   const c = Math.floor((x - PADDING) / STEP);
   const r = Math.floor((y - PADDING) / STEP);
   const b = lifted ? blocks.find((o) => !o.removed && o.cells.some(([rr, cc]) => rr === r && cc === c)) || null : null;
