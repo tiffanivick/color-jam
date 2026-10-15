@@ -11,7 +11,8 @@ Themed blocks:
 - level["walls"]  stumps: fixed squares nothing can enter
 - level["lava"]   lava squares: blocks may slide across but may not stop on them
 - jelly    moves at most one square per drag
-- comet    slides in a straight line until it hits something (stops only at the end)
+- comet    slides in a straight line until it hits something (stops only at the end), or until a
+           gate of its colour is straight off to its side with a clear way out (it parks there)
 - bubble   after every move, rises one square if it can (and pops out of a matching top gate)
 - pillar N obstacle that crumbles once N moves have been made
 - rainbow  may leave through a gate of any colour
@@ -55,6 +56,15 @@ def step_result(p, cells, d, occ, rows, cols, exits):
     return "move"
 
 
+def straight_out(p, cells, d, occ, rows, cols, exits):
+    for _ in range(20):
+        res = step_result(p, cells, d, occ, rows, cols, exits)
+        if res != "move":
+            return res == "exit"
+        cells = [(r + DIRS[d][0], c + DIRS[d][1]) for r, c in cells]
+    return False
+
+
 def solve(level, rows=6, cols=6, max_states=300_000):
     """Returns (min_moves, path). -1 if unsolvable, None if the search gave up.
     path items: ("park", i, offset) or ("exit", i, offset)."""
@@ -76,6 +86,10 @@ def solve(level, rows=6, cols=6, max_states=300_000):
 
     def on_lava(cells):
         return any(c in lava for c in cells)
+
+    def sees_gate(p, cells, d, occ, dirs):
+        side = ("up", "down") if d in ("left", "right") else ("left", "right")
+        return any(s in dirs and straight_out(p, cells, s, occ, rows, cols, exits) for s in side)
 
     def explore(state, i):
         p = pieces[i]
@@ -103,6 +117,8 @@ def solve(level, rows=6, cols=6, max_states=300_000):
                     if res == "blocked":
                         break
                     off = (off[0] + DIRS[d][0], off[1] + DIRS[d][1])
+                    if sees_gate(p, shifted(p["cells"], off), d, occ, dirs):
+                        break
                 if res != "exit" and off != cur and not on_lava(shifted(p["cells"], off)):
                     spots.append(off)
             return can_exit, spots

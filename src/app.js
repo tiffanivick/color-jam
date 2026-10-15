@@ -821,6 +821,7 @@ function loadLevel(idx) {
   blocks.forEach(renderBlock);
   exits.forEach(renderExit);
   renderBoardFeatures();
+  resetHistory();
   $("levelTitle").textContent = "Level " + (idx + 1);
   $("levelWorld").textContent = WORLDS[L.world].name + " · " + (L.difficulty || "Easy");
   cancelAnimationFrame(tickHandle);
@@ -1107,6 +1108,7 @@ function updateBoosters() {
   $("boosterHammer").classList.toggle("active", toolMode === "hammer");
   $("boosterVac").classList.toggle("active", toolMode === "vacuum");
   updateGadgets(can);
+  queueStuckCheck();
 }
 function buyPrompt(id) {
   openSheet(
@@ -1238,6 +1240,146 @@ function blast(b, e) {
   b.el.classList.add("gone");
   hammerFX(b, finish);
   checkTrophies();
+}
+
+// ---------------------------------------------------------------- never stuck
+// After every change the board settles, a snapshot is kept and a background solver (solver.js)
+// checks whether the level can still be won without power-ups. If it can't, a card offers a
+// free rewind to the most recent position that can still win, putting back blocks that left.
+let boardHistory = []; // snapshots since the level started, oldest first
+let stuckTimer = 0;
+let stuckAsk = 0; // id of the newest question to the solver
+let stuckWorker = null;
+const stuckWaiting = new Map();
+try {
+  stuckWorker = new Worker("src/solver.js?v=45");
+  stuckWorker.onmessage = (e) => {
+    const cb = stuckWaiting.get(e.data.id);
+    stuckWaiting.delete(e.data.id);
+    if (cb) cb(e.data.solvable);
+  };
+} catch (e) {
+  stuckWorker = null; // no workers: the game just doesn't check
+}
+function askSolver(board) {
+  return new Promise((res) => {
+    if (!stuckWorker) return res(null);
+    const id = ++stuckAsk;
+    stuckWaiting.set(id, res);
+    try {
+      stuckWorker.postMessage({ id, board, cap: 150000 });
+    } catch (e) {
+      stuckWaiting.delete(id);
+      return res(null);
+    }
+    setTimeout(() => stuckWaiting.has(id) && (stuckWaiting.delete(id), res(null)), 4000);
+  });
+}
+function snapshot() {
+  return {
+    cells: blocks.map((b) => b.cells.map((c) => c.slice())),
+    removed: blocks.map((b) => !!b.removed),
+    rainbow: blocks.map((b) => !!b.rainbow),
+    pillars: blocks.map((b) => b.pillarLeft),
+    bombs: blocks.map((b) => b.bombLeft),
+    moves,
+  };
+}
+const snapKey = (s) => JSON.stringify([s.cells, s.removed, s.rainbow]);
+function boardFor(s) {
+  const L = LEVELS[curIdx];
+  return {
+    rows: ROWS, cols: COLS, walls: boardWalls, lava: boardLava,
+    exits: exits.map((e) => ({ side: e.side, index: e.index, length: e.length || 1, color: e.color })), // plain data only (no DOM)
+    pieces: blocks.map((b, i) => ({
+      cells: s.cells[i], color: b.color, rainbow: s.rainbow[i], axis: b.axis, comet: b.comet, jelly: b.jelly, bubble: b.bubble,
+      gray: b.gray, crate: b.crate, pillar: b.pillar ? Math.max(1, s.pillars[i] || 1) : 0, ice: b.ice, lockBy: b.lockBy, removed: s.removed[i],
+    })),
+  };
+}
+function resetHistory() {
+  boardHistory = [];
+  hideStuck();
+}
+function queueStuckCheck() {
+  clearTimeout(stuckTimer);
+  stuckTimer = setTimeout(stuckCheck, 450); // once things have settled (slides, bubbles, effects)
+}
+async function stuckCheck() {
+  if (!blocks.length || levelOver || fxBusy || drag) return;
+  const s = snapshot();
+  const k = snapKey(s);
+  if (boardHistory.length && snapKey(boardHistory[boardHistory.length - 1]) === k) return;
+  s.ok = null;
+  boardHistory.push(s);
+  const level = curIdx;
+  s.ok = await askSolver(boardFor(s));
+  if (level !== curIdx || levelOver || boardHistory[boardHistory.length - 1] !== s) return; // moved on
+  if (s.ok === false) showStuck();
+}
+function showStuck() {
+  let card = $("stuck");
+  if (!card) {
+    card = el("div", "stuck-card");
+    card.id = "stuck";
+    document.querySelector(".board-wrap").appendChild(card);
+  }
+  card.innerHTML = '<b>No way to win from here</b><span>A move a little while back closed off every way out. Rewind to the last position that can still win.</span><button class="btn-big green" id="stuckRewind">Rewind · free</button><button class="btn-link" id="stuckKeep">Keep playing</button>';
+  card.hidden = false;
+  boardEl.classList.add("is-stuck");
+  Sfx.error();
+  $("stuckRewind").addEventListener("click", rewindToWinnable);
+  $("stuckKeep").addEventListener("click", hideStuck);
+}
+function hideStuck() {
+  const card = $("stuck");
+  if (card) card.hidden = true;
+  boardEl.classList.remove("is-stuck");
+}
+async function rewindToWinnable() {
+  $("stuckRewind").disabled = true;
+  $("stuckRewind").textContent = "Rewinding…";
+  // newest first: the last position the solver hasn't ruled out
+  for (let i = boardHistory.length - 2; i >= 0; i--) {
+    const s = boardHistory[i];
+    if (s.ok == null) s.ok = await askSolver(boardFor(s));
+    if (s.ok === false) continue;
+    boardHistory.length = i + 1;
+    restoreSnapshot(s);
+    return;
+  }
+  boardHistory.length = 1;
+  restoreSnapshot(boardHistory[0]);
+}
+function restoreSnapshot(s) {
+  hideStuck();
+  setTool(null);
+  endGhost();
+  blocks.forEach((b, i) => {
+    if (b.el) b.el.remove();
+    b.el = null;
+    b.cells = s.cells[i].map((c) => c.slice());
+    b.removed = s.removed[i];
+    b.rainbow = s.rainbow[i];
+    if (b.removed) return;
+    renderBlock(b);
+    if (b.pillar && s.pillars[i] != null) {
+      b.pillarLeft = s.pillars[i];
+      if (b.pbadge) b.pbadge.textContent = b.pillarLeft;
+    }
+    if (b.bomb && s.bombs[i] != null) {
+      b.bombLeft = s.bombs[i];
+      b.el.classList.toggle("hot", b.bombLeft <= BOMB_HOT);
+      showFuse(b);
+    }
+  });
+  moves = s.moves;
+  undoStack = [];
+  refreshIce();
+  updateHUD();
+  updateBoosters();
+  Sfx.whoosh();
+  toast("Rewound. This position can still be won.");
 }
 
 // ---------------------------------------------------------------- winning

@@ -374,13 +374,32 @@ function shiftCells(cells, dr, dc) {
 // the block may stop there or carry on past; it only leaves when you push it into the gate.
 const onLava = (cells) => boardLava.length > 0 && cells.some(([r, c]) => boardLava.some(([lr, lc]) => lr === r && lc === c));
 
+// a comet flying in `dir` with its squares at `cells`: is a gate of its colour straight off to
+// one side, with nothing in the way? (it parks there)
+function cometSeesGate(block, cells, dir) {
+  const side = dir === "left" || dir === "right" ? ["up", "down"] : ["left", "right"];
+  return side.some((d) => dirsFor(block).includes(d) && straightOut(block, cells, d));
+}
+// can these squares slide straight out through a matching gate in `dir`?
+function straightOut(block, cells, dir) {
+  for (let k = 0; k < 20; k++) {
+    const t = tryStep(block, cells, dir);
+    if (t.status === "exit") return true;
+    if (t.status !== "move") return false;
+    cells = t.next;
+  }
+  return false;
+}
+
 function computeReachable(block) {
   const reach = new Map();
   const start = { dr: 0, dc: 0, exitDir: null };
   reach.set(stateKey(0, 0), start);
   const dirs = dirsFor(block);
 
-  // comet: only straight lines; it can only come to rest at the end of a line
+  // comet: only straight lines; it comes to rest at the end of a line, or (build 45) at the
+  // first square where a gate of its colour is straight off to its side with a clear way out,
+  // so the next flick sends it through
   if (block.comet) {
     const gate0 = dirs.find((dir) => tryStep(block, block.cells, dir).status === "exit");
     if (gate0) start.exitDir = gate0;
@@ -398,6 +417,7 @@ function computeReachable(block) {
         reach.set(stateKey(n.dr, n.dc), n);
         cells = t.next;
         s = n;
+        if (cometSeesGate(block, cells, dir)) break;
       }
       if (s !== start && !s.exitDir) s.noStop = onLava(shiftCells(block.cells, s.dr, s.dc)) || (block === ghostBlock && overlapsOthers(block, shiftCells(block.cells, s.dr, s.dc)));
       if (s !== start) s.lineEnd = true;

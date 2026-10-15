@@ -3,7 +3,7 @@
 Audience: an LLM coding agent (Claude Code) taking over development.
 Repo: `github.com/tiffanivick/color-jam` (branch `main`), deployed by GitHub Pages at
 `https://tiffanivick.github.io/color-jam/`. Owner plays it as an iPhone home-screen web app.
-Current live build: **44** (`?v=44`).
+Current live build: **45** (`?v=45`).
 
 ---
 
@@ -48,6 +48,7 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
 | `src/brick.js` | SVG "realistic" block: rounded outline across cells, gradients, studs, rim, and the overlays (ice, chains, stripes, arrows, snow) |
 | `src/block3d.js` | Since build 39: the realistic block **body** as a real 3D render (WebGL2 ray-marcher, glossy plastic, studs, contact shadow), cached per shape + colour as a PNG data URL. `renderBlock()` puts it under the SVG (`img.block-3d`, wrapper class `.b3d`) and CSS hides the SVG's own body. Crates, rainbow, pillar, bubble, jelly and comet blocks keep the SVG body. No WebGL → SVG body as before. Preview: `tools/r3d/blocks.html`. |
 | `src/fx.js` | **Power-up visuals and aiming**: hammer, vacuum, freeze, tool aiming/tracking |
+| `src/solver.js` | Since build 45: in-game solver, run as a Web Worker after every settled change (`queueStuckCheck()` from `updateBoosters()`). Searches every option (no greedy exits), bombs ignored, crates smashable, cap 150k states → `null` (unknown). If the board can't be won, a card offers a free **rewind** to the newest snapshot (`boardHistory`) that can still win; `restoreSnapshot()` re-renders blocks that had left. Also runs in node: `require('./src/solver.js').solvable(board)`. |
 | `src/workshop.js` | Since build 40: the **Workshop** (see §2.5): mystery blocks, blueprints, and the gadgets Magnet, Ghost, Saw, Rainbow Brush. Loaded before `app.js`, so its top-level code must not touch `app.js` names. |
 | `src/app.js` | Game state and save, level flow, timer, boosters, win/lose, shop, quests, trophies, UI sheets |
 | `src/sound.js` | WebAudio synth SFX (`Sfx.smash(n)`, `Sfx.suck()`, `Sfx.freeze()`, `Sfx.pop()`, …) |
@@ -99,6 +100,9 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
     feature must be placed to stop it. Since build 42 the flick direction is read from the finger
     (`drag.target`), not the block, and it launches once the finger has gone 0.45 squares: a comet
     already in front of its gate can't move, but must still go out when flicked toward it.
+    Since build 45 a flying comet also **parks** at the first square where a gate of its colour is
+    straight off to its side with a clear way out (`cometSeesGate()`; mirrored in solver3 and
+    src/solver.js). All 80 levels still solve; levels 42, 44, 47, 49 got 1-2 moves shorter.
   - `bubble`: floats up one square after every move.
   - `pillar`: blocks the way, crumbles after N moves.
   - `rainbow`: may use any gate.

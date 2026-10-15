@@ -1410,3 +1410,15 @@ body.skin-real[data-world="star"] .block-group:not(.gray, .crate, .frozen, .thaw
 /* "Open it now" on the win screen */
 .ws-open { width: 100%; justify-content: center; padding: 8px 10px; border-radius: 16px; background: rgba(139, 92, 246, 0.25) !important; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.25) !important; color: #fff; }
 .ws-open em { margin-left: auto; padding: 5px 12px; border-radius: 99px; font-style: normal; background: #ffd447; color: #5a3500; }
+
+/* never stuck: the card over the board when the level can't be won any more */
+.board-wrap { position: relative; }
+.stuck-card { position: absolute; inset: 0; margin: auto; height: fit-content; z-index: 60; width: min(300px, 86%);
+  display: grid; justify-items: center; gap: 8px; padding: 18px 16px 12px; text-align: center; border-radius: 24px; color: #fff;
+  background: rgba(20, 14, 60, 0.92); box-shadow: inset 0 0 0 2px rgba(255,255,255,0.25), 0 14px 30px rgba(4, 2, 20, 0.55);
+  animation: card-in 0.35s cubic-bezier(0.3, 1.4, 0.5, 1); }
+.stuck-card[hidden] { display: none; }
+.stuck-card b { font-family: var(--display); font-weight: 400; font-size: 22px; }
+.stuck-card span { font-size: 14px; line-height: 1.35; color: rgba(255,255,255,0.85); }
+.stuck-card .btn-big { font-size: 20px; padding: 10px 16px 12px; margin-top: 4px; }
+.board.is-stuck { filter: saturate(0.6) brightness(0.85); transition: filter 0.3s; }
