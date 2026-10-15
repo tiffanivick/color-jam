@@ -1468,7 +1468,7 @@ function showWin(r) {
       (r.chest ? '<div class="note chest">' + ICON.chest + "<span>You earned a chest!</span></div>" : "") +
       (r.ticket ? '<div class="note chest">' + ICON.rush + "<span>Bonus Rush ticket!</span></div>" : "") +
       '<button class="note chest ws-open" id="winOpen">' + ICON.workshop + "<span>" + (r.box === "gold" ? "Gold mystery block!" : "Mystery block!") + "</span><em>Open it now</em></button>" +
-      '<button class="btn-big green" id="winNext">' + nextLabel + '</button><button class="btn-link" id="winHome">Back to home</button></div>',
+      '<div class="win-actions"><button class="btn-big green" id="winNext">' + nextLabel + '</button><button class="btn-link" id="winHome">Back to home</button></div></div>',
   );
   [0, 1, 2].forEach((i) => i < r.stars && setTimeout(() => Sfx.star(i), 250 + i * 200 + 150));
   setTimeout(() => countUp($("winTotal"), r.total, "+"), 900);
