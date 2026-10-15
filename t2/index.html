@@ -13,7 +13,7 @@
     <title>Color Jam</title>
     <link rel="preload" href="fonts/BagelFatOne-Regular.ttf" as="font" type="font/ttf" crossorigin />
     <link rel="preload" href="fonts/DMSans.ttf" as="font" type="font/ttf" crossorigin />
-    <link rel="stylesheet" href="style.css?v=39" />
+    <link rel="stylesheet" href="style.css?v=40" />
   </head>
   <body data-world="meadow">
     <div id="bg" aria-hidden="true"><div class="hills"></div><div class="deco" id="deco"></div></div>
@@ -48,6 +48,7 @@
             <button class="tile" id="tileChest"><span class="tile-ic" id="chestIc"></span><span class="tile-t">Chests</span><span class="badge" id="chestBadge" hidden>0</span></button>
             <button class="tile" id="tileQuests"><span class="tile-ic" id="questIc"></span><span class="tile-t">Daily quests</span><span class="badge" id="questBadge" hidden>0</span></button>
             <button class="tile" id="tileRush"><span class="tile-ic" id="rushIc"></span><span class="tile-t">Bonus Rush</span><span class="badge" id="rushBadge" hidden>0</span></button>
+            <button class="tile" id="tileWorkshop"><span class="tile-ic" id="workshopIc"></span><span class="tile-t">Workshop</span><span class="badge" id="workshopBadge" hidden>0</span></button>
           </div>
         </section>
 
@@ -73,6 +74,13 @@
           <h2 class="pane-title">Shop</h2>
           <p class="pane-sub">Spend the coins you earn on power-ups.</p>
           <div class="list" id="shopList"></div>
+        </section>
+
+        <!-- WORKSHOP (workshop.js) -->
+        <section class="pane" id="paneWorkshop" hidden>
+          <h2 class="pane-title">Workshop</h2>
+          <p class="pane-sub">Crack mystery blocks, collect blueprint pieces, build gadgets.</p>
+          <div id="workshop"></div>
         </section>
 
         <!-- TROPHIES -->
@@ -108,6 +116,7 @@
       <div class="combo" id="combo"><span id="comboText">x2</span><i id="comboBar"></i></div>
       <div class="tip" id="tip"></div>
       <div class="board-wrap"><div class="board" id="board"></div></div>
+      <div class="gadgets" id="gadgets" hidden></div>
       <div class="boosters">
         <button class="booster" id="boosterUndo"><span class="b-ic"><svg viewBox="0 0 24 24"><path d="M12 5V2L6.5 6.5 12 11V8a5 5 0 1 1-5 5H5a7 7 0 1 0 7-8Z"/></svg></span><span class="b-name">Undo</span><span class="b-count" id="cntUndo">0</span></button>
         <button class="booster" id="boosterHammer"><span class="b-ic"><svg viewBox="0 0 24 24"><path d="M13.5 3 9 7.5l1.6 1.6-6.9 6.9 2.3 2.3 6.9-6.9 1.6 1.6L19 8.5 13.5 3Z"/></svg></span><span class="b-name">Hammer</span><span class="b-count" id="cntHammer">0</span></button>
@@ -120,13 +129,14 @@
     <div class="overlay hidden" id="modal"><div class="sheet" id="sheet"></div></div>
     <div class="toasts" id="toasts" aria-live="polite"></div>
 
-    <script src="src/sound.js?v=39"></script>
-    <script src="src/worlds.js?v=39"></script>
-    <script src="src/brick.js?v=39"></script>
-    <script src="src/block3d.js?v=39"></script>
-    <script src="src/engine.js?v=39"></script>
-    <script src="src/fx.js?v=39"></script>
-    <script src="src/app.js?v=39"></script>
+    <script src="src/sound.js?v=40"></script>
+    <script src="src/worlds.js?v=40"></script>
+    <script src="src/brick.js?v=40"></script>
+    <script src="src/block3d.js?v=40"></script>
+    <script src="src/engine.js?v=40"></script>
+    <script src="src/fx.js?v=40"></script>
+    <script src="src/workshop.js?v=40"></script>
+    <script src="src/app.js?v=40"></script>
   <script>
       if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
     </script>

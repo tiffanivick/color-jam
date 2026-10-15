@@ -70,6 +70,17 @@ function renderBoardFeatures() {
     piecesEl.appendChild(s);
   });
 }
+// Ghost (a Workshop gadget): this block's next drag passes through other blocks. It still can't
+// stop on top of one, and stumps and walls still stop it.
+let ghostBlock = null;
+function overlapsOthers(block, cells) {
+  return blocks.some((o) => o !== block && !o.removed && o.cells.some(([r, c]) => cells.some(([nr, nc]) => nr === r && nc === c)));
+}
+function endGhost() {
+  if (ghostBlock && ghostBlock.el) ghostBlock.el.classList.remove("ghost");
+  ghostBlock = null;
+}
+
 function chained(b) {
   return b.lockBy != null && blocks[b.lockBy] && !blocks[b.lockBy].removed;
 }
@@ -386,7 +397,7 @@ function computeReachable(block) {
         cells = t.next;
         s = n;
       }
-      if (s !== start && !s.exitDir) s.noStop = onLava(shiftCells(block.cells, s.dr, s.dc));
+      if (s !== start && !s.exitDir) s.noStop = onLava(shiftCells(block.cells, s.dr, s.dc)) || (block === ghostBlock && overlapsOthers(block, shiftCells(block.cells, s.dr, s.dc)));
       if (s !== start) s.lineEnd = true;
     }
     return reach;
@@ -400,7 +411,7 @@ function computeReachable(block) {
       const t = tryStep(block, block.cells, dir);
       if (t.status !== "move") continue;
       const n = { dr: DIRS[dir][0], dc: DIRS[dir][1], exitDir: null };
-      n.noStop = onLava(t.next);
+      n.noStop = onLava(t.next) || (block === ghostBlock && overlapsOthers(block, t.next));
       reach.set(stateKey(n.dr, n.dc), n);
     }
     return reach;
@@ -422,7 +433,7 @@ function computeReachable(block) {
       if (reach.has(stateKey(nr, nc))) continue;
       const t = tryStep(block, cells, dir);
       if (t.status === "move") {
-        const n = { dr: nr, dc: nc, exitDir: null, noStop: onLava(t.next) };
+        const n = { dr: nr, dc: nc, exitDir: null, noStop: onLava(t.next) || (block === ghostBlock && overlapsOthers(block, t.next)) };
         reach.set(stateKey(nr, nc), n);
         queue.push(n);
       }
@@ -561,7 +572,7 @@ function setupDrag(b, el) {
     if (drag || b.removed || levelOver) return;
     e.preventDefault();
     if (blastMode) {
-      blast(b);
+      blast(b, e);
       return;
     }
     if (b.crate) {
@@ -758,6 +769,7 @@ function celebrateExit(block, ex) {
 }
 
 function exitBlock(block, el, state) {
+  if (block === ghostBlock) endGhost();
   block.removed = true;
   moves++;
   updateHUD();
@@ -864,6 +876,7 @@ function endDrag() {
   if (best.dr !== 0 || best.dc !== 0) {
     undoStack.push({ snap: blocks.map((o) => o.cells), pillars: blocks.map((o) => o.pillarLeft) });
     block.cells = shiftCells(block.cells, best.dr, best.dc);
+    if (block === ghostBlock) endGhost();
     moves++;
     updateHUD();
     updateBoosters();
@@ -898,7 +911,7 @@ function exitPathClear(movingBlock, cells, vec) {
   const inside = (r, c) => r >= 0 && r < ROWS && c >= 0 && c < COLS;
   const taken = (r, c) =>
     boardWalls.some(([wr, wc]) => wr === r && wc === c) ||
-    blocks.some((o) => o !== movingBlock && !o.removed && o.cells.some(([orr, oc]) => orr === r && oc === c));
+    (movingBlock !== ghostBlock && blocks.some((o) => o !== movingBlock && !o.removed && o.cells.some(([orr, oc]) => orr === r && oc === c)));
   for (const [r0, c0] of cells) {
     let r = r0 + vec[0];
     let c = c0 + vec[1];
@@ -933,7 +946,7 @@ function tryStep(movingBlock, cells, dir) {
         next.some(([nr, nc]) => nr === r && nc === c),
       ),
   );
-  if (occupied) return { status: "blocked" };
+  if (occupied && movingBlock !== ghostBlock) return { status: "blocked" };
   if (boardWalls.some(([r, c]) => next.some(([nr, nc]) => nr === r && nc === c))) return { status: "blocked" };
 
   return { status: "move", next };

@@ -3,7 +3,7 @@
 Audience: an LLM coding agent (Claude Code) taking over development.
 Repo: `github.com/tiffanivick/color-jam` (branch `main`), deployed by GitHub Pages at
 `https://tiffanivick.github.io/color-jam/`. Owner plays it as an iPhone home-screen web app.
-Current live build: **39** (`?v=39`).
+Current live build: **40** (`?v=40`).
 
 ---
 
@@ -43,11 +43,12 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
 
 | File | Responsibility |
 |---|---|
-| `index.html` | Markup and script order: `sound.js, worlds.js, brick.js, block3d.js, engine.js, fx.js, app.js`, all `?v=N` |
+| `index.html` | Markup and script order: `sound.js, worlds.js, brick.js, block3d.js, engine.js, fx.js, workshop.js, app.js`, all `?v=N` |
 | `src/engine.js` | Board, blocks, drag physics, movement rules, gates/exits, themed mechanics, bombs |
 | `src/brick.js` | SVG "realistic" block: rounded outline across cells, gradients, studs, rim, and the overlays (ice, chains, stripes, arrows, snow) |
 | `src/block3d.js` | Since build 39: the realistic block **body** as a real 3D render (WebGL2 ray-marcher, glossy plastic, studs, contact shadow), cached per shape + colour as a PNG data URL. `renderBlock()` puts it under the SVG (`img.block-3d`, wrapper class `.b3d`) and CSS hides the SVG's own body. Crates, rainbow, pillar, bubble, jelly and comet blocks keep the SVG body. No WebGL → SVG body as before. Preview: `tools/r3d/blocks.html`. |
 | `src/fx.js` | **Power-up visuals and aiming**: hammer, vacuum, freeze, tool aiming/tracking |
+| `src/workshop.js` | Since build 40: the **Workshop** (see §2.5): mystery blocks, blueprints, and the gadgets Magnet, Ghost, Saw, Rainbow Brush. Loaded before `app.js`, so its top-level code must not touch `app.js` names. |
 | `src/app.js` | Game state and save, level flow, timer, boosters, win/lose, shop, quests, trophies, UI sheets |
 | `src/sound.js` | WebAudio synth SFX (`Sfx.smash(n)`, `Sfx.suck()`, `Sfx.freeze()`, `Sfx.pop()`, …) |
 | `src/worlds.js` | World themes: colours, backgrounds, and which mechanics each world introduces |
@@ -124,6 +125,27 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
   The actual use goes through `blast(b)`.
 
 ---
+
+### 2.5 The Workshop (build 40)
+- Every win pushes a mystery block onto `S.workshop.boxes` (`"gold"` for 3 stars, else `"plain"`;
+  a finished world adds two gold ones). New and old saves start with one free gold block.
+- Workshop screen (Home tile, `#paneWorkshop`, `renderWorkshop()`): tap a block twice. It cracks,
+  then bursts and 2 pieces (gold: 3) fly into the current 3x3 blueprint (`S.workshop.got`).
+  Never a duplicate; pieces beyond a full blueprint become 15 coins each. A full blueprint must be
+  built before more blocks open.
+- Building: blueprints 1-4 unlock a gadget each (+3 uses and 100/120/150/180 coins); then bonus
+  blueprints (Pocket Rocket, Helper Robot, Sky Balloon, cycling) pay 200+50k coins and 2+ random
+  gadgets. Pictures are inline SVG in `BP_ART`, shown 3x3 via `background-position`.
+- Gadgets (`S.inv.magnet|ghost|saw|paint`, prices in `COST`) sit in `#gadgets` above the boosters
+  once built, also in the Shop. They are player aids only: no level rule or solver change.
+  - **Magnet**: every needed block with a clear straight run to a gate of its colour exits, one
+    after another (`magnetPath()`), until none is left. Each exit counts as a move.
+  - **Ghost**: `ghostBlock` in engine.js. `tryStep()` and `exitPathClear()` ignore other blocks
+    for it; squares overlapping a block are `noStop`. Ends after it moves or leaves (`endGhost()`).
+  - **Saw**: removes the tapped square (or the nearest end square if that would split the block),
+    then `rebuildBlock()` (keeps the bomb fuse, clears undo).
+  - **Rainbow Brush**: sets `b.rainbow` (any gate) and rebuilds.
+  - Targeted gadgets go through `setTool(id)` → engine `blast(b, e)` → `gadgetTap()`.
 
 ## 3. Power-up visual spec (CRITICAL)
 

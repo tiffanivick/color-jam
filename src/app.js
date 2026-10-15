@@ -17,7 +17,10 @@ const defaults = () => ({
   starsTotal: 0,
   coins: 60,
   chests: 0, // chests waiting to be opened
-  inv: { undo: 2, hammer: 1, freeze: 2, vacuum: 1 },
+  inv: { undo: 2, hammer: 1, freeze: 2, vacuum: 1, magnet: 0, ghost: 0, saw: 0, paint: 0 },
+  // the Workshop (workshop.js): mystery blocks waiting to be opened ("gold" ones hold an extra
+  // piece), the blueprint being collected, the pieces of it you have, and how many you've built
+  workshop: { boxes: ["gold"], bp: 0, got: [], built: 0 },
   bonus: 1, // Bonus Rush tickets
   skin: "real", // block look: classic or real
   stats: { levels: 0, perfect: 0, bestCombo: 0, exits: 0, thawed: 0, blasted: 0, worlds: 0, coinsEarned: 0, questsDone: 0, streakBest: 0, crates: 0, defused: 0, rushes: 0, vacuumed: 0 },
@@ -87,7 +90,13 @@ const ICON = {
   hammer: '<svg viewBox="0 0 24 24"><path d="M13.5 3 9 7.5l1.6 1.6-6.9 6.9 2.3 2.3 6.9-6.9 1.6 1.6L19 8.5 13.5 3Zm-.2 2.6 3.1 3.1-1.7 1.7-3.1-3.1 1.7-1.7Z"/></svg>',
   freeze: '<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16Zm-1 3v6l4.2 2.5 1-1.7L13 12V7h-2Z"/></svg>',
   vacuum: '<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-9 9h2a7 7 0 0 1 7-7V3Zm0 4a5 5 0 0 0-5 5h2a3 3 0 0 1 3-3V7Zm0 4a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm9 1a9 9 0 0 1-9 9v-2a7 7 0 0 0 7-7h2Zm-4 0a5 5 0 0 1-5 5v-2a3 3 0 0 0 3-3h2Z"/></svg>',
+  // Workshop gadgets
+  magnet: '<svg viewBox="0 0 24 24"><path d="M5 3h4v8a3 3 0 0 0 6 0V3h4v8a7 7 0 0 1-14 0V3Zm0 2v2h4V5H5Zm10 0v2h4V5h-4Z"/></svg>',
+  ghost: '<svg viewBox="0 0 24 24"><path d="M12 2a8 8 0 0 0-8 8v11l2.7-2 2.6 2 2.7-2 2.7 2 2.6-2L20 21V10a8 8 0 0 0-8-8Zm-3 7a1.6 1.6 0 1 1 0 3.2A1.6 1.6 0 0 1 9 9Zm6 0a1.6 1.6 0 1 1 0 3.2A1.6 1.6 0 0 1 15 9Z"/></svg>',
+  saw: '<svg viewBox="0 0 24 24"><path d="M12 1.5l2 3 3.4-1 .5 3.5 3.4 1-1.6 3.1 2.3 2.6-3.1 1.6.2 3.5-3.5-.4-1.6 3.1-2-2.9-2 2.9-1.6-3.1-3.5.4.2-3.5L1.2 14l2.3-2.6L1.9 8.3l3.4-1 .5-3.5 3.4 1 2.8-3.3ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"/></svg>',
+  paint: '<svg viewBox="0 0 24 24"><path d="M20.7 2.3a1.5 1.5 0 0 0-2.1 0L9.8 11.1l3.1 3.1 8.8-8.8a1.5 1.5 0 0 0 0-2.1l-1-1ZM8.4 12.6C6 12.6 4.6 14 4.4 16.2 4.2 18 3.4 19.3 2 20c3.6 1.5 7.6.6 8.9-2.2.6-1.3.4-2.6-.4-3.4l-2.1-1.8Z"/></svg>',
   rush: '<svg viewBox="0 0 48 48"><rect x="6" y="14" width="36" height="28" rx="4" fill="#c97a2e" stroke="#8a4f17" stroke-width="2"/><path d="M6 24h36M6 33h36" stroke="#8a4f17" stroke-width="2"/><path d="M24 3l3 6 6 1-4.5 4 1 6.500-5.500-3-5.500 3 1-6.500L15 10l6-1 3-6Z" fill="#ffd447" stroke="#b8941a" stroke-width="1.5"/></svg>',
+  workshop: '<svg viewBox="0 0 48 48"><rect x="8" y="14" width="32" height="28" rx="5" fill="#ffb020" stroke="#9a5a00" stroke-width="2"/><rect x="8" y="14" width="32" height="9" rx="4" fill="#ffd36a"/><path d="M24 14v28M8 27h32" stroke="#8b5cf6" stroke-width="5"/><path d="M24 14c-6-9-14-5-9 0m9 0c6-9 14-5 9 0" fill="none" stroke="#8b5cf6" stroke-width="3.5" stroke-linecap="round"/><circle cx="24" cy="31" r="6.5" fill="#fff" stroke="#8b5cf6" stroke-width="2"/><path d="M21.8 29.3a2.3 2.3 0 1 1 3.2 2.1c-.7.3-1 .7-1 1.4M24 35.2v.1" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round"/></svg>',
   quest: '<svg viewBox="0 0 48 48"><rect x="9" y="6" width="30" height="36" rx="5" fill="#fff1d6"/><rect x="9" y="6" width="30" height="36" rx="5" fill="none" stroke="#b78a4a" stroke-width="2"/><path d="M15 18h18M15 26h18M15 34h11" stroke="#b78a4a" stroke-width="3" stroke-linecap="round"/><path d="m31 33 3 3 6-7" fill="none" stroke="#25b86b" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   flame: '<svg viewBox="0 0 48 48"><path d="M24 4c2 8 11 12 11 24a11 11 0 0 1-22 0c0-5 3-8 5-11 1 3 2 4 4 5-1-8 0-12 2-18Z" fill="#ff8a3d"/><path d="M24 22c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-7 1 2 2 2 3 3-1-4-1-6 0-8Z" fill="#ffd447"/></svg>',
   sndOn: '<path d="M4 9v6h4l5 4V5L8 9H4Zm12.5 3a3.5 3.5 0 0 0-2-3.2v6.4a3.5 3.5 0 0 0 2-3.2ZM14.5 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6Z"/>',
@@ -116,13 +125,17 @@ const worldUnlocked = (w) => worldCount[w] > 0 && worldStart[w] <= S.cleared;
 const worldDone = (w) => worldCount[w] > 0 && clearedInWorld(w) >= worldCount[w];
 const currentWorld = () => (allDone() ? WORLDS.length - 1 : worldOfLevel(S.cleared));
 const TIER_BONUS = { Easy: 0, Normal: 5, Hard: 15, "Very hard": 30 };
-const COST = { undo: 20, hammer: 40, freeze: 30, vacuum: 80 };
-const POWER_NAME = { undo: "Undo", hammer: "Hammer", freeze: "Time Freeze", vacuum: "Vacuum" };
+const COST = { undo: 20, hammer: 40, freeze: 30, vacuum: 80, magnet: 90, ghost: 60, saw: 50, paint: 70 };
+const POWER_NAME = { undo: "Undo", hammer: "Hammer", freeze: "Time Freeze", vacuum: "Vacuum", magnet: "Magnet", ghost: "Ghost", saw: "Saw", paint: "Rainbow Brush" };
 const POWER_TEXT = {
   undo: "Take back your last move",
   hammer: "Smash any one block off the board",
   freeze: "Stops the clock for 10 seconds",
   vacuum: "Sucks up every block of the colour you tap",
+  magnet: "Every block with a clear path to its gate zips out",
+  ghost: "One block slides straight through the others",
+  saw: "Cuts one square off a block",
+  paint: "Paints a block rainbow: any gate will take it",
 };
 
 // ---------------------------------------------------------------- theme + background
@@ -270,6 +283,7 @@ function showPane(name) {
   if (name === "Quests") renderQuests();
   if (name === "Shop") renderShop();
   if (name === "Trophies") renderTrophies();
+  if (name === "Workshop") renderWorkshop();
 }
 $("tabbar").addEventListener("click", (e) => {
   const t = e.target.closest(".tab");
@@ -317,6 +331,11 @@ function renderHome() {
   cb.hidden = S.chests <= 0;
   cb.textContent = S.chests;
   $("tileChest").classList.toggle("glow", S.chests > 0);
+  $("workshopIc").innerHTML = ICON.workshop;
+  const boxes = S.workshop.boxes.length;
+  $("workshopBadge").hidden = boxes <= 0;
+  $("workshopBadge").textContent = boxes;
+  $("tileWorkshop").classList.toggle("glow", boxes > 0 || bpComplete());
   const ready = questsReady();
   [$("questBadge"), $("tabQuestBadge")].forEach((b) => {
     b.hidden = ready <= 0;
@@ -330,6 +349,7 @@ $("playBtn").addEventListener("click", () => {
 $("tileChest").addEventListener("click", openChest);
 $("tileQuests").addEventListener("click", () => showPane("Quests"));
 $("tileRush").addEventListener("click", () => openRush());
+$("tileWorkshop").addEventListener("click", () => showPane("Workshop"));
 
 // ---------------------------------------------------------------- map
 let mapWorld = 0;
@@ -627,6 +647,7 @@ function renderShop() {
   });
   skinRow.appendChild(sb);
   list.appendChild(skinRow);
+  workshopShopRows(list); // gadgets you've built
   SHOP.forEach((it) => {
     [1, 3].forEach((qty) => {
       const price = qty === 1 ? COST[it.id] : Math.round(COST[it.id] * 3 * 0.8);
@@ -673,6 +694,7 @@ const TROPHIES = [
   { id: "vac", name: "Hoover", desc: "Use the Vacuum 3 times", get: () => S.stats.vacuumed, goal: 3 },
   { id: "world1", name: "Picture Perfect", desc: "Finish a world's picture", get: () => S.stats.worlds, goal: 1 },
   { id: "world5", name: "Master Builder", desc: "Finish every picture", get: () => S.stats.worlds, goal: WORLDS.length },
+  { id: "inventor", name: "Inventor", desc: "Build all 4 gadgets in the Workshop", get: () => S.workshop.built, goal: 4 },
   { id: "exits", name: "Traffic Controller", desc: "Slide 200 blocks out", get: () => S.stats.exits, goal: 200 },
   { id: "rich", name: "Piggy Bank", desc: "Earn 1000 coins in total", get: () => S.stats.coinsEarned, goal: 1000 },
   { id: "streak3", name: "Regular", desc: "Reach a 3-day streak", get: () => S.stats.streakBest, goal: 3 },
@@ -744,6 +766,7 @@ function loadLevel(idx) {
   undoStack = [];
   blastMode = false;
   toolMode = null;
+  endGhost();
   hammerAimShow(false);
   levelOver = false;
   usedPower = false;
@@ -1042,6 +1065,7 @@ function updateBoosters() {
   });
   $("boosterHammer").classList.toggle("active", toolMode === "hammer");
   $("boosterVac").classList.toggle("active", toolMode === "vacuum");
+  updateGadgets(can);
 }
 function buyPrompt(id) {
   openSheet(
@@ -1065,6 +1089,7 @@ function setTool(mode) {
   blastMode = !!mode;
   boardEl.classList.toggle("blast-mode", mode === "hammer");
   boardEl.classList.toggle("vac-mode", mode === "vacuum");
+  boardEl.classList.toggle("gadget-mode", !!GADGETS[mode]);
   toolAimShow(mode);
   updateBoosters();
 }
@@ -1138,7 +1163,8 @@ function popBlock(b) {
 const touching = (a, b) => a.cells.some(([r, c]) => b.cells.some(([r2, c2]) => Math.abs(r - r2) + Math.abs(c - c2) === 1));
 
 // called by the engine when you tap a block while a tool is armed
-function blast(b) {
+function blast(b, e) {
+  if (GADGETS[toolMode]) return gadgetTap(toolMode, b, e); // Workshop gadgets (workshop.js)
   const mode = toolMode;
   setTool(null);
   const finish = () => {
@@ -1217,6 +1243,10 @@ function checkWin() {
   }
   S.coins += total;
   S.stats.coinsEarned += total;
+  // a mystery block for the Workshop every level (a gold one, with an extra piece, for 3 stars)
+  const box = stars === 3 ? "gold" : "plain";
+  S.workshop.boxes.push(box);
+  if (worldComplete) S.workshop.boxes.push("gold", "gold");
 
   questEvent("clear", 1);
   questEvent("stars", stars);
@@ -1227,7 +1257,7 @@ function checkWin() {
   setTimeout(
     () =>
       showWin({
-        idx, w, stars, base, starBonus, tier, comboBonus, timeBonus, worldBonus, total, chest, ticket, worldComplete, before, after,
+        idx, w, stars, base, starBonus, tier, comboBonus, timeBonus, worldBonus, total, chest, ticket, worldComplete, before, after, box,
         difficulty: L.difficulty || "Easy",
       }),
     700,
@@ -1254,6 +1284,7 @@ function showWin(r) {
       '<div class="win-pic"><div class="mosaic mini" id="winMosaic"></div><div class="win-pic-t"><b>' + WORLDS[r.w].picture + "</b><span>" + pct + '% rebuilt</span></div></div>' +
       (r.chest ? '<div class="note chest">' + ICON.chest + "<span>You earned a chest!</span></div>" : "") +
       (r.ticket ? '<div class="note chest">' + ICON.rush + "<span>Bonus Rush ticket!</span></div>" : "") +
+      '<div class="note chest">' + ICON.workshop + "<span>" + (r.box === "gold" ? "Gold mystery block! Open it in the Workshop" : "Mystery block! Open it in the Workshop") + "</span></div>" +
       '<button class="btn-big green" id="winNext">' + nextLabel + '</button><button class="btn-link" id="winHome">Back to home</button></div>',
   );
   [0, 1, 2].forEach((i) => i < r.stars && setTimeout(() => Sfx.star(i), 250 + i * 200 + 150));
