@@ -11,6 +11,8 @@ const el = (tag, cls, html) => {
 
 // ---------------------------------------------------------------- save data
 const SAVE_KEY = "colorjam3.save";
+const ECON_CAP = 300; // coins kept when an old save is rebalanced
+const ECON_INV = 5; // most of any one power-up kept
 const defaults = () => ({
   cleared: 0, // levels finished, in order. Levels never come back.
   stars: {}, // level index -> stars earned
@@ -21,6 +23,7 @@ const defaults = () => ({
   // the Workshop (workshop.js): mystery blocks waiting to be opened ("gold" ones hold an extra
   // piece), the blueprint being collected, the pieces of it you have, and how many you've built
   workshop: { boxes: ["gold"], bp: 0, got: [], built: 0 },
+  econ: 2, // economy version: saves from before build 43 are brought in line once (see load)
   bonus: 1, // Bonus Rush tickets
   skin: "real", // block look: classic or real
   stats: { levels: 0, perfect: 0, bestCombo: 0, exits: 0, thawed: 0, blasted: 0, worlds: 0, coinsEarned: 0, questsDone: 0, streakBest: 0, crates: 0, defused: 0, rushes: 0, vacuumed: 0 },
@@ -40,12 +43,26 @@ function load() {
         d[k] = typeof d[k] === "object" && !Array.isArray(d[k]) ? { ...d[k], ...raw[k] } : raw[k];
       }
     }
+    // build 43: the economy was rebalanced. A save from before then is brought in line once:
+    // coins are capped at 300 and the rest exchanged for gold mystery blocks (1 per 1200, up to
+    // 5), and stockpiled power-ups are trimmed to 5 each. A note explains it on the next start.
+    if (raw && !raw.econ) {
+      const was = d.coins;
+      const boxes = Math.min(5, Math.floor(Math.max(0, was - ECON_CAP) / 1200));
+      d.coins = Math.min(was, ECON_CAP);
+      for (let i = 0; i < boxes; i++) d.workshop.boxes.push("gold");
+      const trimmed = {};
+      for (const k of Object.keys(d.inv)) if (d.inv[k] > ECON_INV) (trimmed[k] = d.inv[k] - ECON_INV), (d.inv[k] = ECON_INV);
+      d.econ = 2;
+      if (was > ECON_CAP || Object.keys(trimmed).length) d.econNote = { was, boxes, trimmed };
+    }
   } catch (e) {
     /* storage blocked or corrupted: start fresh */
   }
   return d;
 }
 let S = load();
+if (S.econNote) save(); // keep the rebalance even if the note is never seen
 function save() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(S));
@@ -578,6 +595,28 @@ function checkLogin() {
     checkTrophies();
     closeSheet();
     renderHome();
+  });
+}
+
+// ---------------------------------------------------------------- economy update note (once)
+function showEconNote() {
+  const n = S.econNote;
+  const trimmed = Object.keys(n.trimmed || {});
+  openSheet(
+    '<div class="ribbon gold">Game update</div><div class="sheet-body"><h3>Rewards mean more now</h3>' +
+      "<p>Coins and power-ups were far too easy to come by, so every prize is worth more from here on: levels, quests and Bonus Rush pay less, and power-ups cost more.</p>" +
+      '<div class="loot">' +
+      (n.was > ECON_CAP ? '<div class="loot-row"><span><i class="coin"></i></span><b>' + n.was + " coins → " + ECON_CAP + "</b></div>" : "") +
+      (n.boxes ? '<div class="loot-row"><span>' + ICON.workshop + "</span><b>+" + n.boxes + " gold mystery block" + (n.boxes > 1 ? "s" : "") + " for the rest</b></div>" : "") +
+      (trimmed.length ? '<div class="loot-row"><span>' + powerGlyph(trimmed[0]) + "</span><b>Power-ups kept: up to " + ECON_INV + " of each</b></div>" : "") +
+      '</div><button class="btn-big green" id="econOk">Got it</button></div>',
+  );
+  $("econOk").addEventListener("click", () => {
+    delete S.econNote;
+    save();
+    closeSheet();
+    renderHome();
+    setTimeout(checkLogin, 300);
   });
 }
 
@@ -1473,7 +1512,7 @@ function openRush() {
   }
   rollDaily();
   showHub("Home");
-  setTimeout(checkLogin, 500);
+  setTimeout(S.econNote ? showEconNote : checkLogin, 500);
 })();
 
 // ---------------------------------------------------------------- iPhone home-screen app: short page area

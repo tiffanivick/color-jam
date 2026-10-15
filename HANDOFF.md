@@ -3,7 +3,7 @@
 Audience: an LLM coding agent (Claude Code) taking over development.
 Repo: `github.com/tiffanivick/color-jam` (branch `main`), deployed by GitHub Pages at
 `https://tiffanivick.github.io/color-jam/`. Owner plays it as an iPhone home-screen web app.
-Current live build: **42** (`?v=42`).
+Current live build: **43** (`?v=43`).
 
 ---
 
@@ -154,7 +154,10 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
   up to 6); quests 10-25; login 10-50; chests 15-40 + 2 power-ups; trophies 20; Bonus Rush crates
   1/2/5 with at most 2 free power-ups and 25 s; Workshop builds 60-120 (bonus 120+30k).
   Prices in `COST` (undo 40, freeze 80, hammer 120, vacuum 200, magnet 220, ghost 150, saw 130,
-  paint 180), +20 s = 60, a mystery block = 150 (`BOX_COST`). Existing coin balances were not touched.
+  paint 180), +20 s = 60, a mystery block = 150 (`BOX_COST`).
+- Build 43: saves without `S.econ` are rebalanced once in `load()`: coins capped at `ECON_CAP` (300),
+  the excess becomes gold mystery blocks (1 per 1200, max 5), power-ups trimmed to `ECON_INV` (5)
+  each; `showEconNote()` explains it on the next start, before the login reward.
 - Realistic board: sunken squares (`.skin-real .cell:not(.lava)`), each gate has a dark slot on its
   board side lit in its colour (`--gc`, set with `backgroundColor`, never the `background`
   shorthand), blocks darken as they slide in (`.exiting`), the frame takes a 2px knock.
