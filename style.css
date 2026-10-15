@@ -1438,3 +1438,8 @@ body.skin-real[data-world="star"] .block-group:not(.gray, .crate, .frozen, .thaw
 .win .ws-open { padding: 6px 8px; }
 .win-actions { position: sticky; bottom: -20px; z-index: 2; display: grid; justify-items: center; gap: 2px; width: calc(100% + 40px); margin: 2px -20px -20px; padding: 12px 20px 14px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--frame) 0%, transparent), var(--frame) 14px); }
+
+/* every kind of block has the 3D body now (same height); jelly and bubble blocks move it too */
+.skin-real .jelly.b3d .block-3d { animation: jelly-wobble 1.8s ease-in-out infinite; transform-origin: 50% 100%; }
+.skin-real .bubble.b3d .block-3d { animation: bubble-bob 2.6s ease-in-out infinite; }
+.skin-real .b3d.comet { filter: drop-shadow(0 0 6px rgba(255, 230, 140, 0.55)) !important; }

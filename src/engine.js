@@ -161,9 +161,13 @@ function renderBlock(b) {
   );
   wrapper.style.setProperty("--gw", wrapper.style.width);
   wrapper.style.setProperty("--gh", wrapper.style.height);
-  // ...with a real 3D body under its overlays (block3d.js); the unusual blocks keep their own look
-  if (typeof Block3D !== "undefined" && !(b.crate || b.rainbow || b.pillar || b.bubble || b.jelly || b.comet)) {
-    const body = Block3D.body(b.cells.map(([r, c]) => [r - r0, c - c0]), b.color, !b.axis);
+  // ...with a real 3D body under its overlays (block3d.js), the same height for every kind of
+  // block: crates, sand pillars and rainbow blocks get their own material, and blocks whose
+  // studs carry a sign (arrows, comet stars) or have none get a smooth top
+  if (typeof Block3D !== "undefined") {
+    const look = b.rainbow ? 1 : b.crate ? 2 : b.pillar ? 3 : 0;
+    const color = b.crate ? "#c98a4c" : b.pillar ? "#e0bd85" : b.color;
+    const body = Block3D.body(b.cells.map(([r, c]) => [r - r0, c - c0]), color, !(b.axis || b.comet || b.crate || b.pillar), look);
     if (body) {
       const img = new Image();
       img.className = "block-3d";

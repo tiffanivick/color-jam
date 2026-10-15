@@ -17,6 +17,7 @@ uniform int nr, ns;
 uniform vec4 rc[16];   // body boxes in squares: x0, x1, z0, z1
 uniform vec2 st[6];    // stud centres (x, z)
 uniform vec3 bcol;
+uniform int look;      // 0 plain colour, 1 rainbow, 2 wooden crate, 3 sand
 const float BH = 0.30;  // block height, in squares
 float sdRBox(vec3 p, vec3 b, float r){ vec3 q=abs(p)-b+r; return length(max(q,0.))+min(max(q.x,max(q.y,q.z)),0.)-r; }
 float sdCyl(vec3 p, float r, float h, float e){ vec2 d=vec2(length(p.xz)-r+e, abs(p.y)-h+e); return min(max(d.x,d.y),0.)+length(max(d,0.))-e; }
@@ -34,6 +35,20 @@ vec2 map(vec3 p){
 vec3 nrm(vec3 p){ vec2 e=vec2(0.0015,0.); return normalize(vec3(map(p+e.xyy).x-map(p-e.xyy).x, map(p+e.yxy).x-map(p-e.yxy).x, map(p+e.yyx).x-map(p-e.yyx).x)); }
 float ao(vec3 p, vec3 n){ float a=0., s=1.; for(int i=1;i<=5;i++){ float h=0.04*float(i); a+=(h-map(p+n*h).x)*s; s*=0.6; } return clamp(1.-2.2*a,0.,1.); }
 float soft(vec3 ro, vec3 rd){ float r=1., t=0.02; for(int i=0;i<40;i++){ float h=map(ro+rd*t).x; r=min(r, 9.*h/t); t+=clamp(h,0.02,0.2); if(r<0.002||t>3.) break; } return clamp(r,0.,1.); }
+float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+// the colour of the surface at p for the block's look
+vec3 surface(vec3 p){
+  if (look == 1) { // rainbow: hues sweep diagonally across the block
+    vec3 c = 0.5 + 0.5*cos(6.2832*(p.x*0.5 + p.z*0.32 + vec3(0., 0.33, 0.67)));
+    return pow(mix(c, vec3(1.), 0.1), vec3(1.4)); }
+  if (look == 2) { // wooden crate: planks across, with grain and dark gaps between them
+    float pl = fract(p.z*2.6);
+    float gap = smoothstep(0.0, 0.06, pl) * smoothstep(1.0, 0.94, pl);
+    float grain = 0.88 + 0.12*sin(p.x*38. + sin(p.z*9.)*2.);
+    return bcol * grain * mix(0.45, 1., gap); }
+  if (look == 3) { // sand: speckled
+    return bcol * (0.9 + 0.12*hash(floor(p.xz*26.))); }
+  return bcol; }
 vec3 sky(vec3 r){ return mix(vec3(0.95,0.85,0.75), vec3(0.75,0.88,1.0), clamp(r.y*0.5+0.5,0.,1.)) * (0.9+0.3*smoothstep(0.6,1.,r.y)); }
 void main(){
   vec2 px = vec2(gl_FragCoord.x, res.y-gl_FragCoord.y);
@@ -55,8 +70,10 @@ void main(){
   float a = ao(p,n);
   float wrap = max(dot(n,L)*0.5+0.5,0.);
   float nh = max(dot(n,normalize(L+v)),0.), fre = pow(1.-max(dot(n,v),0.),4.);
-  vec3 c = bcol*(0.38*a + 0.72*wrap*wrap) + vec3(1.)*pow(nh,70.)*0.7 + sky(reflect(-v,n))*(0.06+0.5*fre)*a;
-  if (h.y==1.) c += bcol*0.06;
+  vec3 col = surface(p);
+  float gloss = look >= 2 ? 0.25 : 0.7; // wood and sand are matte
+  vec3 c = col*(0.38*a + 0.72*wrap*wrap) + vec3(1.)*pow(nh,70.)*gloss + sky(reflect(-v,n))*(0.06+0.5*fre)*a*(look >= 2 ? 0.4 : 1.);
+  if (h.y==1.) c += col*0.06;
   o = vec4(clamp(pow(c,vec3(0.95)),0.,1.), 1.);
 }`;
   let gl = null, cv = null, U = null, failed = false;
@@ -87,7 +104,7 @@ void main(){
       const loc = gl.getAttribLocation(pr, "p");
       gl.enableVertexAttribArray(loc);
       gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-      const names = ["res", "org", "S", "kob", "nr", "ns", "rc", "st", "bcol"];
+      const names = ["res", "org", "S", "kob", "nr", "ns", "rc", "st", "bcol", "look"];
       U = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(pr, n)]));
       cv.addEventListener("webglcontextlost", () => {
         gl = null;
@@ -120,9 +137,10 @@ void main(){
     return out;
   }
 
-  // cells relative to the block's top-left square. Returns { src, pad } or null.
-  function body(cells, color, studs = true) {
-    const key = color + (studs ? "s" : "") + JSON.stringify([...cells].sort((p, q) => p[0] - q[0] || p[1] - q[1]));
+  // cells relative to the block's top-left square; look: 0 plain, 1 rainbow, 2 wood, 3 sand.
+  // Returns { src, pad, w, h } or null.
+  function body(cells, color, studs = true, look = 0) {
+    const key = color + (studs ? "s" : "") + look + JSON.stringify([...cells].sort((p, q) => p[0] - q[0] || p[1] - q[1]));
     if (cache.has(key)) return cache.get(key);
     if (!init()) return null;
     const rows = Math.max(...cells.map((c) => c[0])) + 1, cols = Math.max(...cells.map((c) => c[1])) + 1;
@@ -146,6 +164,7 @@ void main(){
       gl.uniform1i(U.ns, st.length);
       gl.uniform2fv(U.st, new Float32Array(6 * 2).fill(0).map((z, i) => (st[i >> 1] ? st[i >> 1][i & 1] : 0)));
       gl.uniform3f(U.bcol, ...[1, 3, 5].map((i) => (parseInt(color.slice(i, i + 2), 16) / 255) ** 1.6));
+      gl.uniform1i(U.look, look);
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
