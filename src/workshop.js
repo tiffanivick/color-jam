@@ -6,6 +6,7 @@
 //  - The first four blueprints each build a new gadget (a power-up): Magnet, Ghost, Saw and
 //    Rainbow Brush, with some free uses and coins. After that, bonus blueprints (Pocket Rocket,
 //    Helper Robot, Sky Balloon, round and round) pay more coins and gadgets every time.
+// The Workshop shows on Home under the world's picture, and the win screen links straight to it.
 // Gadgets are help only: the puzzles and their rules don't change, and every level is still
 // solvable without them. They sit in a second row above the power-ups once built.
 // Loaded before app.js: top-level code here must not use app.js names (S, $, el, ...).
@@ -18,7 +19,8 @@ const GADGETS = {
   paint: { short: "Paint", hint: "Tap a block to paint it rainbow" },
 };
 const PIECES = 9; // a 3x3 blueprint
-const SCRAP_COINS = 15; // a spare piece
+const SCRAP_COINS = 10; // a spare piece
+const BOX_COST = 150; // buy a mystery block with coins
 
 // ---------------------------------------------------------------- blueprint pictures (120x120)
 function sawBladePath(cx, cy, n, ro, ri) {
@@ -87,10 +89,10 @@ function artURL(name) {
 
 // ---------------------------------------------------------------- blueprints
 const BLUEPRINTS = [
-  { art: "magnet", name: "Magnet", gadget: "magnet", charges: 3, coins: 100 },
-  { art: "ghost", name: "Ghost", gadget: "ghost", charges: 3, coins: 120 },
-  { art: "saw", name: "Saw", gadget: "saw", charges: 3, coins: 150 },
-  { art: "paint", name: "Rainbow Brush", gadget: "paint", charges: 3, coins: 180 },
+  { art: "magnet", name: "Magnet", gadget: "magnet", charges: 3, coins: 60 },
+  { art: "ghost", name: "Ghost", gadget: "ghost", charges: 3, coins: 80 },
+  { art: "saw", name: "Saw", gadget: "saw", charges: 3, coins: 100 },
+  { art: "paint", name: "Rainbow Brush", gadget: "paint", charges: 3, coins: 120 },
 ];
 const BONUS_BLUEPRINTS = [
   { art: "rocket", name: "Pocket Rocket" },
@@ -100,7 +102,7 @@ const BONUS_BLUEPRINTS = [
 function blueprint(i) {
   if (i < BLUEPRINTS.length) return BLUEPRINTS[i];
   const k = i - BLUEPRINTS.length;
-  return { ...BONUS_BLUEPRINTS[k % BONUS_BLUEPRINTS.length], coins: 200 + 50 * k, gifts: 2 + Math.floor(k / 3) };
+  return { ...BONUS_BLUEPRINTS[k % BONUS_BLUEPRINTS.length], coins: 120 + 30 * k, gifts: 2 + Math.floor(k / 3) };
 }
 const bpComplete = () => S.workshop.got.length >= PIECES;
 const gadgetUnlocked = (id) => S.workshop.built > GADGET_ORDER.indexOf(id);
@@ -149,6 +151,24 @@ function renderWorkshop() {
     stage.appendChild(el("div", "mystery-note", bpComplete() ? "Build your blueprint to open more" : "Tap twice to crack it open"));
   } else {
     stage.appendChild(el("div", "mystery-empty", '<i></i><b>No mystery blocks right now</b><span>Win a level to earn one. Three stars earns a gold one with an extra piece.</span>'));
+  }
+  // spend coins on progress: buy another mystery block
+  if (!bpComplete()) {
+    const buyBox = el("button", "chip-btn go mystery-buy", "Buy one · " + BOX_COST + ' <i class="coin"></i>');
+    buyBox.addEventListener("click", () => {
+      if (S.coins < BOX_COST) {
+        Sfx.error();
+        toast("Not enough coins yet. Clear levels to earn more.");
+        return;
+      }
+      S.coins -= BOX_COST;
+      S.workshop.boxes.push("plain");
+      save();
+      Sfx.coin();
+      renderTop();
+      renderWorkshop();
+    });
+    stage.appendChild(buyBox);
   }
   host.appendChild(stage);
 
@@ -331,6 +351,22 @@ function buildBlueprint(card) {
   }, 1100);
 }
 
+// the Workshop strip at the foot of the world card on Home: a tiny picture of the blueprint,
+// how far along it is, and the mystery blocks waiting
+function renderWsStrip(node) {
+  const W = S.workshop;
+  const bp = blueprint(W.bp);
+  const art = artURL(bp.art);
+  const mini = [...Array(PIECES).keys()]
+    .map((i) => '<i' + (W.got.includes(i) ? ' class="got" style="background-image:' + art.replace(/"/g, "&quot;") + ";background-position:" + (i % 3) * 50 + "% " + Math.floor(i / 3) * 50 + '%"' : "") + "></i>")
+    .join("");
+  const n = W.boxes.length;
+  const right = bpComplete() ? '<em class="ws-go">Build!</em>' : n ? '<em class="ws-go">' + ICON.workshop + "<b>" + n + "</b></em>" : '<em class="ws-arrow">›</em>';
+  node.innerHTML =
+    '<span class="ws-mini" style="--art:' + art.replace(/"/g, "&quot;") + '">' + mini + '</span><span class="ws-t"><small>Next gadget</small><b>' + bp.name + '</b><span class="ws-bar"><i style="width:' + (100 * W.got.length) / PIECES + '%"></i></span></span>' + right;
+  node.classList.toggle("glow", n > 0 || bpComplete());
+}
+
 // shop rows for the gadgets you've built
 function workshopShopRows(list) {
   GADGET_ORDER.filter(gadgetUnlocked).forEach((id) => {
@@ -344,28 +380,51 @@ function workshopShopRows(list) {
 }
 
 // ---------------------------------------------------------------- gadgets in a level
+// One "Gadgets" button on the power-up bar (once any is built) opens a small tray above it.
 function updateGadgets(can) {
-  const row = $("gadgets");
+  const tray = $("gadgets");
+  const tools = $("boosterTools");
   const ids = GADGET_ORDER.filter(gadgetUnlocked);
-  row.hidden = !ids.length;
-  if (row.dataset.ids !== ids.join()) {
-    row.dataset.ids = ids.join();
-    row.innerHTML = ids
+  tools.hidden = !ids.length;
+  document.querySelector(".boosters").classList.toggle("five", ids.length > 0);
+  if (tray.dataset.ids !== ids.join()) {
+    tray.dataset.ids = ids.join();
+    tray.innerHTML = ids
       .map((id) => '<button class="booster gadget" id="gad-' + id + '" data-g="' + id + '"><span class="b-ic">' + ICON[id] + '</span><span class="b-name">' + GADGETS[id].short + '</span><span class="b-count"></span></button>')
       .join("");
   }
+  let total = 0;
   ids.forEach((id) => {
     const b = $("gad-" + id);
     const n = S.inv[id];
+    total += n;
     b.querySelector(".b-count").textContent = n > 0 ? n : "+";
     b.classList.toggle("empty", n <= 0);
     b.classList.toggle("off", n > 0 && !can);
     b.classList.toggle("active", toolMode === id);
   });
+  $("cntTools").textContent = total;
+  // while a gadget is picked, the button shows it
+  const picked = GADGETS[toolMode] ? toolMode : null;
+  tools.classList.toggle("active", !!picked);
+  tools.querySelector(".b-ic").innerHTML = picked ? ICON[picked] : TOOLBOX_SVG;
+  tools.querySelector(".b-name").textContent = picked ? GADGETS[picked].short : "Gadgets";
 }
+const TOOLBOX_SVG = document.querySelector("#boosterTools .b-ic").innerHTML;
+const gadgetTray = (open) => document.getElementById("gadgets").classList.toggle("open", open);
+document.getElementById("boosterTools").addEventListener("click", () => {
+  if (GADGETS[toolMode]) return setTool(null); // put the picked gadget away
+  gadgetTray(!document.getElementById("gadgets").classList.contains("open"));
+});
 document.getElementById("gadgets").addEventListener("click", (e) => {
   const b = e.target.closest(".gadget");
-  if (b) useGadget(b.dataset.g);
+  if (!b) return;
+  gadgetTray(false);
+  useGadget(b.dataset.g);
+});
+// tapping anywhere else closes the tray
+document.addEventListener("pointerdown", (e) => {
+  if (!e.target.closest("#gadgets, #boosterTools")) gadgetTray(false);
 });
 
 function useGadget(id) {

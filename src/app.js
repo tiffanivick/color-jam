@@ -124,8 +124,10 @@ const clearedInWorld = (w) => Math.max(0, Math.min(worldCount[w], S.cleared - wo
 const worldUnlocked = (w) => worldCount[w] > 0 && worldStart[w] <= S.cleared;
 const worldDone = (w) => worldCount[w] > 0 && clearedInWorld(w) >= worldCount[w];
 const currentWorld = () => (allDone() ? WORLDS.length - 1 : worldOfLevel(S.cleared));
-const TIER_BONUS = { Easy: 0, Normal: 5, Hard: 15, "Very hard": 30 };
-const COST = { undo: 20, hammer: 40, freeze: 30, vacuum: 80, magnet: 90, ghost: 60, saw: 50, paint: 70 };
+// ECONOMY (rebalanced in build 42): a level pays about 15-30 coins, so a power-up costs a few
+// levels of play and the free ones from chests and the Workshop feel like real prizes.
+const TIER_BONUS = { Easy: 0, Normal: 2, Hard: 5, "Very hard": 10 };
+const COST = { undo: 40, hammer: 120, freeze: 80, vacuum: 200, magnet: 220, ghost: 150, saw: 130, paint: 180 };
 const POWER_NAME = { undo: "Undo", hammer: "Hammer", freeze: "Time Freeze", vacuum: "Vacuum", magnet: "Magnet", ghost: "Ghost", saw: "Saw", paint: "Rainbow Brush" };
 const POWER_TEXT = {
   undo: "Take back your last move",
@@ -331,11 +333,7 @@ function renderHome() {
   cb.hidden = S.chests <= 0;
   cb.textContent = S.chests;
   $("tileChest").classList.toggle("glow", S.chests > 0);
-  $("workshopIc").innerHTML = ICON.workshop;
-  const boxes = S.workshop.boxes.length;
-  $("workshopBadge").hidden = boxes <= 0;
-  $("workshopBadge").textContent = boxes;
-  $("tileWorkshop").classList.toggle("glow", boxes > 0 || bpComplete());
+  renderWsStrip($("wsStrip")); // the Workshop, right under the world's picture (workshop.js)
   const ready = questsReady();
   [$("questBadge"), $("tabQuestBadge")].forEach((b) => {
     b.hidden = ready <= 0;
@@ -349,7 +347,7 @@ $("playBtn").addEventListener("click", () => {
 $("tileChest").addEventListener("click", openChest);
 $("tileQuests").addEventListener("click", () => showPane("Quests"));
 $("tileRush").addEventListener("click", () => openRush());
-$("tileWorkshop").addEventListener("click", () => showPane("Workshop"));
+$("wsStrip").addEventListener("click", () => showPane("Workshop"));
 
 // ---------------------------------------------------------------- map
 let mapWorld = 0;
@@ -437,17 +435,17 @@ function renderMap(selectWorld) {
 
 // ---------------------------------------------------------------- daily quests
 const QUEST_POOL = [
-  { id: "clear3", text: "Clear 3 levels", ev: "clear", goal: 3, reward: 40 },
-  { id: "clear2", text: "Clear 2 levels", ev: "clear", goal: 2, reward: 25 },
-  { id: "stars6", text: "Earn 6 stars", ev: "stars", goal: 6, reward: 45 },
-  { id: "stars4", text: "Earn 4 stars", ev: "stars", goal: 4, reward: 30 },
-  { id: "nopower", text: "Clear a level without power-ups", ev: "nopower", goal: 1, reward: 40 },
-  { id: "combo3", text: "Reach a x3 combo", ev: "combo", goal: 3, reward: 45, max: true },
-  { id: "combo4", text: "Reach a x4 combo", ev: "combo", goal: 4, reward: 60, max: true },
-  { id: "three", text: "Finish a level with 3 stars", ev: "three", goal: 1, reward: 50 },
-  { id: "exits25", text: "Slide 25 blocks out", ev: "exits", goal: 25, reward: 40 },
-  { id: "crates4", text: "Smash 4 crates", ev: "crates", goal: 4, reward: 45, needsCrate: true },
-  { id: "thaw2", text: "Melt 2 frozen blocks", ev: "thawed", goal: 2, reward: 50, needsIce: true },
+  { id: "clear3", text: "Clear 3 levels", ev: "clear", goal: 3, reward: 20 },
+  { id: "clear2", text: "Clear 2 levels", ev: "clear", goal: 2, reward: 12 },
+  { id: "stars6", text: "Earn 6 stars", ev: "stars", goal: 6, reward: 22 },
+  { id: "stars4", text: "Earn 4 stars", ev: "stars", goal: 4, reward: 15 },
+  { id: "nopower", text: "Clear a level without power-ups", ev: "nopower", goal: 1, reward: 20 },
+  { id: "combo3", text: "Reach a x3 combo", ev: "combo", goal: 3, reward: 20, max: true },
+  { id: "combo4", text: "Reach a x4 combo", ev: "combo", goal: 4, reward: 25, max: true },
+  { id: "three", text: "Finish a level with 3 stars", ev: "three", goal: 1, reward: 20 },
+  { id: "exits25", text: "Slide 25 blocks out", ev: "exits", goal: 25, reward: 15 },
+  { id: "crates4", text: "Smash 4 crates", ev: "crates", goal: 4, reward: 18, needsCrate: true },
+  { id: "thaw2", text: "Melt 2 frozen blocks", ev: "thawed", goal: 2, reward: 20, needsIce: true },
 ];
 function hashStr(s) {
   let h = 2166136261;
@@ -551,7 +549,7 @@ function renderQuests() {
 }
 
 // ---------------------------------------------------------------- login streak
-const LOGIN_REWARDS = [20, 25, 30, 40, 50, 60, 100];
+const LOGIN_REWARDS = [10, 15, 20, 25, 30, 40, 50];
 function checkLogin() {
   const t = todayStr();
   if (S.login.claimed === t) return;
@@ -601,7 +599,7 @@ function openChest() {
     $("chestBig").classList.add("opened");
     $("chestBig").innerHTML = ICON.chestOpen;
     Sfx.chestOpen();
-    const coins = 40 + Math.floor(Math.random() * 6) * 10;
+    const coins = 15 + Math.floor(Math.random() * 6) * 5;
     const types = ["undo", "hammer", "freeze", "vacuum"];
     const a = types[Math.floor(Math.random() * 4)];
     const b = types[Math.floor(Math.random() * 4)];
@@ -709,17 +707,17 @@ function checkTrophies() {
   TROPHIES.forEach((t) => {
     if (S.trophies[t.id] || t.get() < t.goal) return;
     S.trophies[t.id] = true;
-    S.coins += 25;
-    S.stats.coinsEarned += 25;
+    S.coins += 20;
+    S.stats.coinsEarned += 20;
     save();
-    toast('<b>Trophy: ' + t.name + '</b> · +25 <i class="coin"></i>', "gold");
+    toast('<b>Trophy: ' + t.name + '</b> · +20 <i class="coin"></i>', "gold");
     Sfx.unlock_();
   });
   renderTop();
 }
 function renderTrophies() {
   const got = TROPHIES.filter((t) => S.trophies[t.id]).length;
-  $("trophySub").textContent = got + " of " + TROPHIES.length + " collected · +25 coins each";
+  $("trophySub").textContent = got + " of " + TROPHIES.length + " collected · +20 coins each";
   const grid = $("trophyGrid");
   grid.innerHTML = "";
   TROPHIES.forEach((t) => {
@@ -889,7 +887,7 @@ function timeUp() {
     showHub("Home");
   });
 }
-const CONTINUE_COST = 30;
+const CONTINUE_COST = 60;
 
 // ---- a bomb ran out of moves
 hooks.boom = (b) => {
@@ -932,9 +930,9 @@ hooks.crateBreak = (b) => {
     S.inv[t]++;
     toast(powerGlyph(t) + " Found a " + POWER_NAME[t] + "!");
   } else {
-    S.coins += 8;
-    S.stats.coinsEarned += 8;
-    toast('<i class="coin"></i> +8');
+    S.coins += 3;
+    S.stats.coinsEarned += 3;
+    toast('<i class="coin"></i> +3');
   }
   save();
   renderTop();
@@ -1218,11 +1216,11 @@ function checkWin() {
   const w = L.world;
   const par = L.par || blocks.length;
   const stars = starsFor(moves, par);
-  const base = 15;
-  const starBonus = stars * 5;
+  const base = 8;
+  const starBonus = stars * 2;
   const tier = TIER_BONUS[L.difficulty || "Easy"] || 0;
-  const comboBonus = bestCombo >= 3 ? (bestCombo - 2) * 5 : 0;
-  const timeBonus = timerStarted ? Math.min(25, Math.floor(timeLeft / 4)) : 0;
+  const comboBonus = bestCombo >= 3 ? (bestCombo - 2) * 2 : 0;
+  const timeBonus = timerStarted ? Math.min(6, Math.floor(timeLeft / 10)) : 0;
   let total = base + starBonus + tier + comboBonus + timeBonus;
 
   const before = clearedInWorld(w);
@@ -1241,7 +1239,7 @@ function checkWin() {
   let worldBonus = 0;
   if (worldComplete) {
     S.stats.worlds++;
-    worldBonus = 150;
+    worldBonus = 100;
     total += worldBonus;
     S.chests++;
   }
@@ -1288,7 +1286,7 @@ function showWin(r) {
       '<div class="win-pic"><div class="mosaic mini" id="winMosaic"></div><div class="win-pic-t"><b>' + WORLDS[r.w].picture + "</b><span>" + pct + '% rebuilt</span></div></div>' +
       (r.chest ? '<div class="note chest">' + ICON.chest + "<span>You earned a chest!</span></div>" : "") +
       (r.ticket ? '<div class="note chest">' + ICON.rush + "<span>Bonus Rush ticket!</span></div>" : "") +
-      '<div class="note chest">' + ICON.workshop + "<span>" + (r.box === "gold" ? "Gold mystery block! Open it in the Workshop" : "Mystery block! Open it in the Workshop") + "</span></div>" +
+      '<button class="note chest ws-open" id="winOpen">' + ICON.workshop + "<span>" + (r.box === "gold" ? "Gold mystery block!" : "Mystery block!") + "</span><em>Open it now</em></button>" +
       '<button class="btn-big green" id="winNext">' + nextLabel + '</button><button class="btn-link" id="winHome">Back to home</button></div>',
   );
   [0, 1, 2].forEach((i) => i < r.stars && setTimeout(() => Sfx.star(i), 250 + i * 200 + 150));
@@ -1307,13 +1305,17 @@ function showWin(r) {
     closeSheet();
     showHub("Home");
   });
+  $("winOpen").addEventListener("click", () => {
+    closeSheet();
+    showHub("Workshop");
+  });
 }
 
 function showWorldComplete(w) {
   const W = WORLDS[w];
   Sfx.chestOpen();
   const sheet = openSheet(
-    '<div class="ribbon gold">Picture complete!</div><div class="sheet-body world-done"><div class="mosaic big" id="doneMosaic"></div><h3>You rebuilt ' + W.picture + '!</h3><p>+150 coins and a bonus chest.</p>' +
+    '<div class="ribbon gold">Picture complete!</div><div class="sheet-body world-done"><div class="mosaic big" id="doneMosaic"></div><h3>You rebuilt ' + W.picture + '!</h3><p>+100 coins, a bonus chest and 2 gold mystery blocks.</p>' +
       (w + 1 < WORLDS.length ? '<p class="unlock">New world unlocked: <b>' + WORLDS[w + 1].name + "</b></p>" : '<p class="unlock">Every picture is rebuilt. New worlds are coming soon.</p>') +
       '<button class="btn-big green" id="wcGo">Continue</button></div>',
   );
@@ -1345,15 +1347,15 @@ function openRush() {
     return;
   }
   openSheet(
-    '<div class="ribbon gold">Bonus Rush</div><div class="sheet-body rush"><div class="rush-top"><div class="pill"><i class="coin"></i><b id="rushCoins">0</b></div><div class="rush-timer" id="rushTimer">15</div></div><p id="rushHint">Smash as many crates as you can in 15 seconds! The clock starts on your first tap.</p><div class="rush-legend" id="rushLegend"><span><i class="crate-cell wood"></i>1 tap · 3 coins</span><span><i class="crate-cell plank"></i>2 taps · 8 coins</span><span><i class="crate-cell gold"></i>3 taps · 20 coins</span><span><i class="crate-cell clock">⏱</i>+2 seconds</span><span><i class="crate-cell gem">★</i>free power-up</span></div><div class="rush-grid" id="rushGrid"></div><button class="btn-big blue" id="rushLater" style="margin-top:14px">Not now</button></div>',
+    '<div class="ribbon gold">Bonus Rush</div><div class="sheet-body rush"><div class="rush-top"><div class="pill"><i class="coin"></i><b id="rushCoins">0</b></div><div class="rush-timer" id="rushTimer">15</div></div><p id="rushHint">Smash as many crates as you can in 15 seconds! The clock starts on your first tap.</p><div class="rush-legend" id="rushLegend"><span><i class="crate-cell wood"></i>1 tap · 1 coin</span><span><i class="crate-cell plank"></i>2 taps · 2 coins</span><span><i class="crate-cell gold"></i>3 taps · 5 coins</span><span><i class="crate-cell clock">⏱</i>+2 seconds</span><span><i class="crate-cell gem">★</i>free power-up (2 max)</span></div><div class="rush-grid" id="rushGrid"></div><button class="btn-big blue" id="rushLater" style="margin-top:14px">Not now</button></div>',
   );
   $("rushLater").addEventListener("click", () => closeSheet());
   const KINDS = [
-    { w: 52, taps: 1, coins: 3, cls: "wood" },
-    { w: 25, taps: 2, coins: 8, cls: "plank" },
-    { w: 9, taps: 3, coins: 20, cls: "gold" },
-    { w: 8, taps: 1, time: 2, cls: "clock" },
-    { w: 6, taps: 1, power: true, cls: "gem" },
+    { w: 54, taps: 1, coins: 1, cls: "wood" },
+    { w: 26, taps: 2, coins: 2, cls: "plank" },
+    { w: 10, taps: 3, coins: 5, cls: "gold" },
+    { w: 7, taps: 1, time: 2, cls: "clock" },
+    { w: 3, taps: 1, power: true, cls: "gem" },
   ];
   const pick = () => {
     let r = Math.random() * 100;
@@ -1405,15 +1407,15 @@ function openRush() {
       }
       // smashed
       Sfx.coin();
-      const pop = el("i", "rush-pop", k.time ? "+" + k.time + "s" : k.power ? "+1" : "+" + k.coins);
+      const pop = el("i", "rush-pop", k.time ? "+" + k.time + "s" : k.power && prizes.length < 2 ? "+1" : "+" + (k.coins || 5));
       c.appendChild(pop);
-      if (k.time) left = Math.min(30, left + k.time);
-      else if (k.power) {
+      if (k.time) left = Math.min(25, left + k.time);
+      else if (k.power && prizes.length < 2) {
         const t = ["undo", "hammer", "freeze", "vacuum"][Math.floor(Math.random() * 4)];
         S.inv[t]++;
         prizes.push(t);
       } else {
-        coins += k.coins;
+        coins += k.coins || 5; // (a star crate after the 2nd power-up pays like a gold one)
         $("rushCoins").textContent = coins;
       }
       c.classList.add("smashed");

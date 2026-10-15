@@ -219,7 +219,7 @@ body[data-world="dusk"] #deco i { bottom: -6%; width: calc(30px * var(--s)); hei
 .btn-big:active, .play-btn:active { --lip: 1px; transform: translateY(6px); animation: none; }
 .btn-link { margin-top: 10px; color: var(--muted); font-size: 14px; font-weight: 700; padding: 6px 12px; }
 
-.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .tile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 6px 10px; border-radius: 20px; background: var(--glass); box-shadow: inset 0 0 0 2px var(--glass-edge), 0 var(--lip-s) 0 rgba(8,4,36,0.28); }
 .tile:active { transform: translateY(3px); }
 .tile.glow { animation: glow 1.6s ease-in-out infinite; }
@@ -1253,6 +1253,7 @@ body.skin-real[data-world="star"] .block-group:not(.gray, .crate, .frozen, .thaw
    WORKSHOP (workshop.js): mystery blocks, blueprints, gadgets
    ===================================================================== */
 .mystery-stage { position: relative; height: 222px; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border-radius: 22px; background: var(--glass); box-shadow: inset 0 0 0 2px var(--glass-edge); }
+.mystery-buy { position: absolute; left: 12px; top: 12px; z-index: 2; min-width: 0; padding: 6px 11px; font-size: 13px; }
 .mystery-stack { position: absolute; right: 14px; top: 18px; z-index: 2; min-width: 34px; height: 30px; padding: 0 8px; border-radius: 99px; display: grid; place-items: center; font-weight: 800; font-size: 16px; background: #fff; color: #1a1744; box-shadow: 0 3px 0 rgba(0,0,0,0.3); }
 .mystery { position: relative; width: 160px; height: 160px; display: grid; place-items: center; background: none !important; box-shadow: none !important; animation: mystery-bob 2.4s ease-in-out infinite; }
 .mystery::before { content: ""; position: absolute; inset: 12px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 230, 140, 0.55), rgba(255, 230, 140, 0)); animation: mystery-glow 2.4s ease-in-out infinite; }
@@ -1330,13 +1331,18 @@ body.skin-real[data-world="star"] .block-group:not(.gray, .crate, .frozen, .thaw
 .gadget-row .pw svg.lock { width: 20px; height: 20px; fill: #fff; }
 .built-art { width: 150px; height: 150px; border-radius: 22px; background-size: cover; box-shadow: 0 0 0 4px #fff, 0 8px 0 rgba(8,4,36,0.3), 0 0 30px 6px rgba(255, 230, 140, 0.7); animation: card-in 0.5s cubic-bezier(0.3, 1.4, 0.5, 1); }
 
-/* gadgets in a level: a second, smaller row above the power-ups */
-.gadgets { display: flex; justify-content: center; gap: 8px; padding: 2px 14px 0; }
-.gadgets[hidden] { display: none; }
-.booster.gadget { min-width: 58px; padding: 5px 6px 4px; border-radius: 14px; }
-.booster.gadget .b-ic svg { width: 18px; height: 18px; }
-.booster.gadget .b-name { font-size: 11px; }
-.booster.gadget .b-count { min-width: 20px; height: 20px; font-size: 12px; top: -7px; }
+/* gadgets in a level: one "Gadgets" button on the bar opens a small tray above it */
+.boosters { position: relative; }
+.boosters.five { gap: 6px; padding-left: 8px; padding-right: 8px; }
+.boosters.five .booster:not(.gadget) { min-width: 0; flex: 1 1 0; max-width: 72px; }
+#boosterTools { --c: #4b4f8a; }
+#boosterTools.active { --c: var(--c-red); }
+.gadgets { position: absolute; left: 50%; bottom: calc(100% - 2px); z-index: 50; display: none; gap: 8px; padding: 14px 12px 10px; border-radius: 22px;
+  transform: translateX(-50%); background: rgba(20, 14, 60, 0.82); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.2), 0 10px 24px rgba(4, 2, 20, 0.5); }
+.gadgets.open { display: flex; animation: tray-up 0.18s cubic-bezier(.3,1.4,.5,1); }
+@keyframes tray-up { from { transform: translate(-50%, 12px) scale(0.92); opacity: 0; } }
+.booster.gadget { min-width: 62px; }
 .board.gadget-mode .block-group { cursor: crosshair; }
 .board.gadget-mode .block-group:not(.removed):hover { filter: brightness(1.08); }
 
@@ -1359,3 +1365,48 @@ body.skin-real[data-world="star"] .block-group:not(.gray, .crate, .frozen, .thaw
 .fx-brush svg { width: 100%; height: 100%; fill: #fff; }
 .block-group.painted { animation: painted 0.5s cubic-bezier(.3,1.6,.5,1); }
 @keyframes painted { from { transform: scale(1.12); filter: brightness(1.5); } }
+
+/* =====================================================================
+   PHYSICAL TRAY (Realistic style, build 42): sunken sockets, gates cut into the frame as slots
+   ===================================================================== */
+.skin-real .cell:not(.lava) {
+  border-radius: 10px;
+  background: radial-gradient(130% 120% at 50% 30%, var(--pocket) 55%, color-mix(in srgb, var(--pocket) 82%, #5a4a9a));
+  box-shadow: inset 0 4px 6px rgba(40, 30, 110, 0.26), inset 0 -2px 0 rgba(255, 255, 255, 0.75), 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+/* each gate is a coloured piece of the frame with a dark slot on the board side that blocks
+   slide into; the light inside the slot is the gate's colour */
+.skin-real .exit-right { background-image: linear-gradient(90deg, rgba(8, 4, 30, 0.82), rgba(8, 4, 30, 0.45) 6px, color-mix(in srgb, var(--gc) 60%, transparent) 7px, transparent 9px); }
+.skin-real .exit-left { background-image: linear-gradient(270deg, rgba(8, 4, 30, 0.82), rgba(8, 4, 30, 0.45) 6px, color-mix(in srgb, var(--gc) 60%, transparent) 7px, transparent 9px); }
+.skin-real .exit-top { background-image: linear-gradient(0deg, rgba(8, 4, 30, 0.82), rgba(8, 4, 30, 0.45) 6px, color-mix(in srgb, var(--gc) 60%, transparent) 7px, transparent 9px); }
+.skin-real .exit-bottom { background-image: linear-gradient(180deg, rgba(8, 4, 30, 0.82), rgba(8, 4, 30, 0.45) 6px, color-mix(in srgb, var(--gc) 60%, transparent) 7px, transparent 9px); }
+/* a block leaving darkens as it goes into the slot */
+.skin-real .block-group.exiting { filter: brightness(0.7) !important; transition: filter 0.2s ease-in; }
+/* the gate lights up in its own colour as a block goes through */
+.skin-real .exit.flash { animation: gate-flash-real 0.6s ease-out; }
+@keyframes gate-flash-real {
+  0% { filter: brightness(1.9) drop-shadow(0 0 10px var(--gc)); transform: scale(1.08); }
+  100% { filter: drop-shadow(0 3px 2px rgba(5, 3, 30, 0.45)); transform: none; }
+}
+
+/* the Workshop strip at the foot of the world card (Home) */
+.ws-strip { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 12px; padding: 9px 12px 9px 9px; border-radius: 18px; text-align: left; color: #fff;
+  background: #1f5fb8 !important; background-image: linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px) !important; background-size: 10px 10px !important;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.3), 0 4px 0 #133d7a !important; }
+.ws-strip:active { transform: translateY(3px); box-shadow: inset 0 0 0 2px rgba(255,255,255,0.3), 0 1px 0 #133d7a !important; }
+.ws-strip.glow { animation: ws-glow 1.6s ease-in-out infinite; }
+@keyframes ws-glow { 50% { box-shadow: inset 0 0 0 2px rgba(255,255,255,0.5), 0 4px 0 #133d7a, 0 0 18px 2px rgba(255, 214, 90, 0.65); } }
+.ws-mini { position: relative; flex: none; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); width: 48px; height: 48px; border-radius: 9px; overflow: hidden; box-shadow: 0 0 0 2px rgba(255,255,255,0.55); }
+.ws-mini::before { content: ""; position: absolute; inset: 0; background: var(--art) center / 100% 100% no-repeat; filter: grayscale(1) brightness(1.7); opacity: 0.3; }
+.ws-mini i { position: relative; background-size: 300% 300%; }
+.ws-t { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.ws-t small { font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.75; }
+.ws-t b { font-family: var(--display); font-weight: 400; font-size: 19px; line-height: 1.05; }
+.ws-bar { height: 7px; border-radius: 99px; background: rgba(8, 20, 60, 0.4); overflow: hidden; }
+.ws-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ffd447, #ffb020); }
+.ws-go { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px 5px 6px; border-radius: 99px; font-style: normal; font-weight: 800; background: #ffd447; color: #5a3500; box-shadow: 0 2px 0 rgba(0,0,0,0.3); }
+.ws-go svg { width: 26px; height: 26px; }
+.ws-arrow { font-style: normal; font-size: 28px; opacity: 0.7; padding-right: 4px; }
+/* "Open it now" on the win screen */
+.ws-open { width: 100%; justify-content: center; padding: 8px 10px; border-radius: 16px; background: rgba(139, 92, 246, 0.25) !important; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.25) !important; color: #fff; }
+.ws-open em { margin-left: auto; padding: 5px 12px; border-radius: 99px; font-style: normal; background: #ffd447; color: #5a3500; }

@@ -306,7 +306,9 @@ function renderBlock(b) {
 function renderExit(e) {
   const el = document.createElement("div");
   el.className = "exit exit-" + e.side;
-  el.style.background = e.color;
+  // colour only (not the background shorthand): the Realistic style cuts a slot into it
+  el.style.backgroundColor = e.color;
+  el.style.setProperty("--gc", e.color);
   const span = e.length || 1;
   const spanPx = span * CELL + (span - 1) * GAP;
 
@@ -789,7 +791,7 @@ function exitBlock(block, el, state) {
   // line it up exactly with the gate (across the way out), then slide straight on from where it
   // is, through the gate; the edge of the grid hides the block as it goes
   el.style.pointerEvents = "none";
-  el.classList.add("gone");
+  el.classList.add("gone", "exiting");
   const x1 = (Math.min(...cols) + state.dc + vc * colSpan) * STEP;
   const y1 = (Math.min(...rows) + state.dr + vr * rowSpan) * STEP;
   const x0 = vc ? parseFloat(el.style.left) : (Math.min(...cols) + state.dc) * STEP;
@@ -804,6 +806,8 @@ function exitBlock(block, el, state) {
   el.style.top = y1 + "px";
   el.style.opacity = "0.2";
   setTimeout(() => el.remove(), ms + 50);
+  // it drops into the slot: the frame takes a small knock toward the way out
+  setTimeout(() => boardEl.animate([{ transform: "translate(0,0)" }, { transform: `translate(${vc * 2}px, ${vr * 2}px)` }, { transform: "translate(0,0)" }], { duration: 160, easing: "ease-out" }), ms * 0.7);
 
   refreshIce();
 
@@ -816,6 +820,8 @@ window.addEventListener("pointermove", (e) => {
   drag.target = [(e.clientX - drag.startX) / STEP, (e.clientY - drag.startY) / STEP];
   dragTo(drag, drag.target[0], drag.target[1]);
   showPos(drag);
+  // a comet launches the moment it's flicked (no need to let go)
+  if (drag.block.comet && Math.max(Math.abs(drag.target[0]), Math.abs(drag.target[1])) >= 0.45) return endDrag();
   const gate = drag.block.comet ? null : gatePush(drag, PUSH);
   if (gate) {
     // lined up with its gate and pushed into it: straight through
@@ -841,16 +847,20 @@ function endDrag() {
   let best = null;
   let bestDist = Infinity;
   if (block.comet) {
-    // a comet keeps going: pushed far enough along a line, it flies to that line's end
-    const ax = Math.abs(pos[0]) >= Math.abs(pos[1]) ? "h" : "v";
-    const amt = ax === "h" ? pos[0] : pos[1];
+    // a comet keeps going: flicked far enough along a line, it flies to that line's end, and
+    // out through a gate of its colour if one is straight ahead. The flick is read from your
+    // finger, not the block: a comet already right in front of its gate can't move, but must
+    // still go out when flicked toward it.
+    const t = d.target;
+    const ax = Math.abs(t[0]) >= Math.abs(t[1]) ? "h" : "v";
+    const amt = ax === "h" ? t[0] : t[1];
     const dir = ax === "h" ? (amt > 0 ? "right" : "left") : amt > 0 ? "down" : "up";
     best = reach.get(stateKey(0, 0));
-    if (Math.abs(amt) >= 0.3) {
-      for (const s of reach.values()) if (s.line === dir && s.lineEnd) best = s;
-      if (best.noStop && best.exitDir !== dir) best = reach.get(stateKey(0, 0));
-      // it flies out only through a gate straight ahead of it
-      if (best.exitDir === dir) return exitBlock(block, el, best);
+    if (Math.abs(amt) >= 0.3 && dirsFor(block).includes(dir)) {
+      let end = best;
+      for (const s of reach.values()) if (s.line === dir && s.lineEnd) end = s;
+      if (tryStep(block, shiftCells(block.cells, end.dr, end.dc), dir).status === "exit") return exitBlock(block, el, Object.assign({}, end, { exitDir: dir }));
+      if (!end.noStop) best = end;
     }
     if (best.exitDir) best = Object.assign({}, best, { exitDir: null });
   } else {
@@ -870,7 +880,7 @@ function endDrag() {
     if (gate) return exitBlock(block, el, gate);
   }
 
-  el.style.transition = "left 0.12s ease-out, top 0.12s ease-out";
+  el.style.transition = block.comet ? "left 0.24s cubic-bezier(.25,.1,.25,1), top 0.24s cubic-bezier(.25,.1,.25,1)" : "left 0.12s ease-out, top 0.12s ease-out";
   el.style.left = baseLeft + best.dc * STEP + "px";
   el.style.top = baseTop + best.dr * STEP + "px";
   if (best.dr !== 0 || best.dc !== 0) {

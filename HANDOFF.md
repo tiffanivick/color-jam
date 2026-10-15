@@ -3,7 +3,7 @@
 Audience: an LLM coding agent (Claude Code) taking over development.
 Repo: `github.com/tiffanivick/color-jam` (branch `main`), deployed by GitHub Pages at
 `https://tiffanivick.github.io/color-jam/`. Owner plays it as an iPhone home-screen web app.
-Current live build: **41** (`?v=41`).
+Current live build: **42** (`?v=42`).
 
 ---
 
@@ -96,7 +96,9 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
     while the clock runs (`burnFuses(dt)`); reaching 0 loses the level.
   - `jelly`: moves one square per drag.
   - `comet`: only flies straight to the end of a line. It cannot stop mid-line; another block or
-    feature must be placed to stop it.
+    feature must be placed to stop it. Since build 42 the flick direction is read from the finger
+    (`drag.target`), not the block, and it launches once the finger has gone 0.45 squares: a comet
+    already in front of its gate can't move, but must still go out when flicked toward it.
   - `bubble`: floats up one square after every move.
   - `pillar`: blocks the way, crumbles after N moves.
   - `rainbow`: may use any gate.
@@ -146,6 +148,20 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
     then `rebuildBlock()` (keeps the bomb fuse, clears undo).
   - **Rainbow Brush**: sets `b.rainbow` (any gate) and rebuilds.
   - Targeted gadgets go through `setTool(id)` → engine `blast(b, e)` → `gadgetTap()`.
+
+### 2.6 Economy, board look and gadget toolbox (build 42)
+- Economy: a win pays ~15-30 coins (`base 8`, `2/star`, `TIER_BONUS` up to 10, combo 2/step, time
+  up to 6); quests 10-25; login 10-50; chests 15-40 + 2 power-ups; trophies 20; Bonus Rush crates
+  1/2/5 with at most 2 free power-ups and 25 s; Workshop builds 60-120 (bonus 120+30k).
+  Prices in `COST` (undo 40, freeze 80, hammer 120, vacuum 200, magnet 220, ghost 150, saw 130,
+  paint 180), +20 s = 60, a mystery block = 150 (`BOX_COST`). Existing coin balances were not touched.
+- Realistic board: sunken squares (`.skin-real .cell:not(.lava)`), each gate has a dark slot on its
+  board side lit in its colour (`--gc`, set with `backgroundColor`, never the `background`
+  shorthand), blocks darken as they slide in (`.exiting`), the frame takes a 2px knock.
+- Gadgets: one **Gadgets** button (`#boosterTools`) on the power-up bar opens the `#gadgets` tray;
+  while a gadget is picked the button shows it and tapping it puts it away.
+- Home: the Workshop is a strip at the foot of the world card (`renderWsStrip()`); the win sheet's
+  mystery-block note is an "Open it now" button to the Workshop.
 
 ## 3. Power-up visual spec (CRITICAL)
 

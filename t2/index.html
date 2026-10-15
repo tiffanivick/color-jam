@@ -13,7 +13,7 @@
     <title>Color Jam</title>
     <link rel="preload" href="fonts/BagelFatOne-Regular.ttf" as="font" type="font/ttf" crossorigin />
     <link rel="preload" href="fonts/DMSans.ttf" as="font" type="font/ttf" crossorigin />
-    <link rel="stylesheet" href="style.css?v=41" />
+    <link rel="stylesheet" href="style.css?v=42" />
   </head>
   <body data-world="meadow">
     <div id="bg" aria-hidden="true"><div class="hills"></div><div class="deco" id="deco"></div></div>
@@ -42,13 +42,13 @@
             <div class="mosaic-wrap"><div class="mosaic" id="homeMosaic"></div></div>
             <div class="picture-note" id="pictureNote">Rebuilding: a cozy cottage</div>
             <div class="bar"><i id="worldBar"></i></div>
+            <button class="ws-strip" id="wsStrip" aria-label="Open the Workshop"></button>
           </div>
           <button class="play-btn" id="playBtn"><span class="play-level" id="playLevel">Play</span><span class="play-sub" id="playSub"></span></button>
           <div class="tiles">
             <button class="tile" id="tileChest"><span class="tile-ic" id="chestIc"></span><span class="tile-t">Chests</span><span class="badge" id="chestBadge" hidden>0</span></button>
             <button class="tile" id="tileQuests"><span class="tile-ic" id="questIc"></span><span class="tile-t">Daily quests</span><span class="badge" id="questBadge" hidden>0</span></button>
             <button class="tile" id="tileRush"><span class="tile-ic" id="rushIc"></span><span class="tile-t">Bonus Rush</span><span class="badge" id="rushBadge" hidden>0</span></button>
-            <button class="tile" id="tileWorkshop"><span class="tile-ic" id="workshopIc"></span><span class="tile-t">Workshop</span><span class="badge" id="workshopBadge" hidden>0</span></button>
           </div>
         </section>
 
@@ -116,12 +116,13 @@
       <div class="combo" id="combo"><span id="comboText">x2</span><i id="comboBar"></i></div>
       <div class="tip" id="tip"></div>
       <div class="board-wrap"><div class="board" id="board"></div></div>
-      <div class="gadgets" id="gadgets" hidden></div>
       <div class="boosters">
+        <div class="gadgets" id="gadgets"></div>
         <button class="booster" id="boosterUndo"><span class="b-ic"><svg viewBox="0 0 24 24"><path d="M12 5V2L6.5 6.5 12 11V8a5 5 0 1 1-5 5H5a7 7 0 1 0 7-8Z"/></svg></span><span class="b-name">Undo</span><span class="b-count" id="cntUndo">0</span></button>
         <button class="booster" id="boosterHammer"><span class="b-ic"><svg viewBox="0 0 24 24"><path d="M13.5 3 9 7.5l1.6 1.6-6.9 6.9 2.3 2.3 6.9-6.9 1.6 1.6L19 8.5 13.5 3Z"/></svg></span><span class="b-name">Hammer</span><span class="b-count" id="cntHammer">0</span></button>
         <button class="booster" id="boosterFreeze"><span class="b-ic"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16Zm-1 3v6l4.2 2.5 1-1.7L13 12V7h-2Z"/></svg></span><span class="b-name">Freeze</span><span class="b-count" id="cntFreeze">0</span></button>
         <button class="booster" id="boosterVac"><span class="b-ic"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-9 9h2a7 7 0 0 1 7-7V3Zm0 4a5 5 0 0 0-5 5h2a3 3 0 0 1 3-3V7Zm0 4a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm9 1a9 9 0 0 1-9 9v-2a7 7 0 0 0 7-7h2Zm-4 0a5 5 0 0 1-5 5v-2a3 3 0 0 0 3-3h2Z"/></svg></span><span class="b-name">Vacuum</span><span class="b-count" id="cntVac">0</span></button>
+        <button class="booster" id="boosterTools" hidden><span class="b-ic"><svg viewBox="0 0 24 24"><path d="M9 3h6a2 2 0 0 1 2 2v2h3a2 2 0 0 1 2 2v3h-7v-1h-2v1H2V9a2 2 0 0 1 2-2h3V5a2 2 0 0 1 2-2Zm0 2v2h6V5H9ZM2 14h9v1h2v-1h9v5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-5Z"/></svg></span><span class="b-name">Gadgets</span><span class="b-count" id="cntTools">0</span></button>
       </div>
     </div>
 
@@ -129,14 +130,14 @@
     <div class="overlay hidden" id="modal"><div class="sheet" id="sheet"></div></div>
     <div class="toasts" id="toasts" aria-live="polite"></div>
 
-    <script src="src/sound.js?v=41"></script>
-    <script src="src/worlds.js?v=41"></script>
-    <script src="src/brick.js?v=41"></script>
-    <script src="src/block3d.js?v=41"></script>
-    <script src="src/engine.js?v=41"></script>
-    <script src="src/fx.js?v=41"></script>
-    <script src="src/workshop.js?v=41"></script>
-    <script src="src/app.js?v=41"></script>
+    <script src="src/sound.js?v=42"></script>
+    <script src="src/worlds.js?v=42"></script>
+    <script src="src/brick.js?v=42"></script>
+    <script src="src/block3d.js?v=42"></script>
+    <script src="src/engine.js?v=42"></script>
+    <script src="src/fx.js?v=42"></script>
+    <script src="src/workshop.js?v=42"></script>
+    <script src="src/app.js?v=42"></script>
   <script>
       if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
     </script>
