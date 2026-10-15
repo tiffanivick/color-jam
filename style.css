@@ -452,10 +452,19 @@ body[data-world="dusk"] #deco i { bottom: -6%; width: calc(30px * var(--s)); hei
 @keyframes jolt { 20% { transform: translateX(-4px) rotate(-2deg); } 50% { transform: translateX(4px) rotate(2deg); } 80% { transform: translateX(-2px); } }
 
 /* bombs */
-.bomb-badge { background: #1d1a33; color: #ffb347; font-family: var(--display); font-size: 16px; line-height: 1; box-shadow: 0 0 0 3px #ff9d2e, 0 0 10px 2px rgba(255, 140, 40, 0.55), 0 3px 0 3px rgba(10, 6, 40, 0.35); }
-.bomb-badge::after { content: ""; position: absolute; top: -9px; right: -2px; width: 8px; height: 8px; border-radius: 50%; background: #ffe27a; box-shadow: 0 0 8px 3px #ff8a3d; animation: spark 0.4s steps(2) infinite; }
-@keyframes spark { 50% { transform: scale(0.5); opacity: 0.6; } }
-.bomb.hot .bomb-badge { background: #c8102e; color: #fff; box-shadow: 0 0 0 3px #fff, 0 0 14px 4px rgba(255, 60, 40, 0.8), 0 3px 0 3px rgba(10, 6, 40, 0.35); animation: throb 0.45s ease-in-out infinite; }
+/* a detonator dial set into the block's top face: a glowing ring that burns away clockwise
+   (--p = fuse left, 1..0) with a spark riding its burning end, and the seconds in the middle */
+.bomb-badge { --p: 1; --ring: #ff9d2e; width: 34px; height: 34px; color: #ffcf7a; font-family: var(--display); font-size: 15px; line-height: 1;
+  background: conic-gradient(var(--ring) calc(var(--p) * 360deg), rgba(20, 10, 40, 0.55) 0);
+  box-shadow: 0 0 0 2px rgba(20, 10, 40, 0.65), 0 2px 3px rgba(10, 6, 40, 0.45), 0 0 10px 1px color-mix(in srgb, var(--ring) 55%, transparent); }
+.bomb-badge::before { content: ""; position: absolute; inset: 4px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 32%, #4a3f6e, #1a1430 70%); box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.6), inset 0 -1px 0 rgba(255, 255, 255, 0.12); }
+.bomb-badge b { position: relative; font-weight: inherit; text-shadow: 0 0 6px color-mix(in srgb, var(--ring) 80%, transparent); }
+.bomb-badge.d3 { font-size: 12px; letter-spacing: -0.5px; }
+.bomb-badge::after { content: ""; position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%;
+  background: #fff3b0; box-shadow: 0 0 6px 3px #ff8a3d; transform: rotate(calc(var(--p) * 360deg)) translateY(-15px); animation: spark 0.35s steps(2) infinite; }
+@keyframes spark { 50% { opacity: 0.55; box-shadow: 0 0 3px 1px #ff8a3d; } }
+.bomb.hot .bomb-badge { --ring: #ff3b3b; color: #fff; animation: throb 0.45s ease-in-out infinite; }
 .bomb .block-cell { box-shadow: inset 0 0 0 2px rgba(255, 150, 40, 0.0); }
 
 /* wooden crates */
@@ -1097,6 +1106,13 @@ html.vp-short .tab { padding-bottom: 3px; }
    ===================================================================== */
 .block-svg { display: none; position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
 .skin-real .block-svg { display: block; }
+/* 3D body (block3d.js): replaces the SVG's body, wall, lighting and studs; the SVG keeps the
+   overlays (ice, chains, stripes, arrows). Its shadow is part of the picture, so no filter. */
+.block-3d { display: none; position: absolute; pointer-events: none; user-select: none; -webkit-user-drag: none; max-width: none; }
+.skin-real .block-3d { display: block; }
+.skin-real .b3d .block-svg :is(.b-wall, .b-wallshade, .b-walldark, .b-face, .b-light, .b-streak, .b-rim) { display: none; }
+.skin-real .b3d .block-svg .stud > :is(.stud-shadow, .stud-side, .stud-top, .stud-hl, .stud-rim) { display: none; }
+.skin-real .block-group.b3d { filter: none !important; }
 .skin-real .block-group .block-cell { background: none !important; box-shadow: none !important; filter: none !important; opacity: 1 !important; animation: none !important; }
 .skin-real .block-group .block-cell::before, .skin-real .block-group .block-cell::after { display: none !important; }
 .skin-real .block-group .side, .skin-real .block-group .lip-joint { display: none !important; }

@@ -123,6 +123,10 @@ function cellHasNeighbor(b, r, c, dr, dc) {
   return b.cells.some(([rr, cc]) => rr === r + dr && cc === c + dc);
 }
 
+// badges sit on the middle of a square's top face, where its stud is (the bottom 8px is the
+// block's front wall; see BRICK_WALL in brick.js)
+const BADGE_Y = 20;
+
 function renderBlock(b) {
   const rows = b.cells.map((c) => c[0]);
   const cols = b.cells.map((c) => c[1]);
@@ -146,6 +150,20 @@ function renderBlock(b) {
   );
   wrapper.style.setProperty("--gw", wrapper.style.width);
   wrapper.style.setProperty("--gh", wrapper.style.height);
+  // ...with a real 3D body under its overlays (block3d.js); the unusual blocks keep their own look
+  if (typeof Block3D !== "undefined" && !(b.crate || b.rainbow || b.pillar || b.bubble || b.jelly || b.comet)) {
+    const body = Block3D.body(b.cells.map(([r, c]) => [r - r0, c - c0]), b.color, !b.axis);
+    if (body) {
+      const img = new Image();
+      img.className = "block-3d";
+      img.alt = "";
+      img.draggable = false;
+      img.src = body.src;
+      Object.assign(img.style, { left: -body.pad + "px", top: -body.pad + "px", width: body.w + "px", height: body.h + "px" });
+      wrapper.prepend(img);
+      wrapper.classList.add("b3d");
+    }
+  }
 
   b.cells.forEach(([r, c]) => {
     const hasRight = cellHasNeighbor(b, r, c, 0, 1);
@@ -199,17 +217,19 @@ function renderBlock(b) {
   if (b.crate) wrapper.classList.add("crate");
   if (b.axis) wrapper.classList.add("dir-" + b.axis);
   if (b.bomb) {
-    b.bombLeft = bombSeconds(b.bomb);
+    b.bombLeft = b.bombFull = bombSeconds(b.bomb);
     wrapper.classList.add("bomb");
     if (b.bombLeft <= BOMB_HOT) wrapper.classList.add("hot");
+    // a detonator dial set into the top of its last square: the ring burns away as the fuse runs
     const bd = document.createElement("div");
     bd.className = "bomb-badge";
-    bd.textContent = Math.ceil(b.bombLeft);
+    bd.innerHTML = "<b></b>";
     const f0 = b.cells.reduce((a, c) => (c[0] > a[0] || (c[0] === a[0] && c[1] > a[1]) ? c : a)); // last cell
-    bd.style.left = (f0[1] - c0) * STEP + CELL / 2 - 14 + "px";
-    bd.style.top = (f0[0] - r0) * STEP + CELL / 2 - 14 + "px";
+    bd.style.left = (f0[1] - c0) * STEP + CELL / 2 - 17 + "px";
+    bd.style.top = (f0[0] - r0) * STEP + BADGE_Y - 17 + "px";
     wrapper.appendChild(bd);
-    b.badge = bd;
+    b.fuse = bd;
+    showFuse(b);
   }
   if (b.lockBy != null) {
     wrapper.classList.add("chained");
@@ -220,7 +240,7 @@ function renderBlock(b) {
     lk.innerHTML = '<svg viewBox="0 0 24 24"><path d="M7 10V8a5 5 0 0 1 10 0v2h1.2c.9 0 1.8.9 1.8 1.8v8.4c0 .9-.9 1.8-1.8 1.8H5.8C4.9 22 4 21.1 4 20.2v-8.4C4 10.9 4.9 10 5.8 10H7Zm2.2 0h5.6V8a2.8 2.8 0 0 0-5.6 0v2Z"/></svg>';
     const f1 = b.cells.reduce((a, c) => (c[0] < a[0] || (c[0] === a[0] && c[1] < a[1]) ? c : a));
     lk.style.left = (f1[1] - c0) * STEP + CELL / 2 - 14 + "px";
-    lk.style.top = (f1[0] - r0) * STEP + CELL / 2 - 14 + "px";
+    lk.style.top = (f1[0] - r0) * STEP + BADGE_Y - 14 + "px";
     wrapper.appendChild(lk);
     b.lockEl = lk;
   }
@@ -230,9 +250,11 @@ function renderBlock(b) {
     kb.style.setProperty("--k", blocks[keyOf].color);
     kb.innerHTML = '<svg viewBox="0 0 24 24"><path d="M14.5 3a5.5 5.5 0 0 0-5.2 7.2L3 16.5V21h4.5v-2.2H10v-2.3h2.2l1.1-1.1A5.5 5.5 0 1 0 14.5 3Zm1.8 3.4a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4Z"/></svg>';
     const sorted = [...b.cells].sort((p, q) => p[0] - q[0] || p[1] - q[1]);
-    const f2 = sorted[Math.floor(sorted.length / 2)];
+    // the middle square, unless a bomb's dial is already there (the dial is on the last square)
+    let f2 = sorted[Math.floor(sorted.length / 2)];
+    if (b.bomb && f2 === sorted[sorted.length - 1] && sorted.length > 1) f2 = sorted[0];
     kb.style.left = (f2[1] - c0) * STEP + CELL / 2 - 14 + "px";
-    kb.style.top = (f2[0] - r0) * STEP + CELL / 2 - 14 + "px";
+    kb.style.top = (f2[0] - r0) * STEP + BADGE_Y - 14 + "px";
     wrapper.appendChild(kb);
   }
   if (b.jelly) wrapper.classList.add("jelly");
@@ -259,7 +281,7 @@ function renderBlock(b) {
     const badge = document.createElement("div");
     badge.className = "ice-badge";
     badge.style.left = (first[1] - c0) * STEP + CELL / 2 - 13 + "px";
-    badge.style.top = (first[0] - r0) * STEP + CELL / 2 - 13 + "px";
+    badge.style.top = (first[0] - r0) * STEP + BADGE_Y - 13 + "px";
     badge.textContent = b.ice;
     wrapper.appendChild(badge);
     b.badge = badge;
@@ -464,20 +486,36 @@ function dragTo(d, tx, ty) {
   d.pos = [x, y];
 }
 
-// A block only goes into a gate when it is lined up with it exactly (locked onto the square in
-// front of it) and your finger pushes on past, into the gate. Returns that square, or null.
-// PUSH: how far past the square (in squares) your finger has to go.
-const PUSH = 0.4;
+// A block lined up with a gate of its colour, with nothing at all between it and the gate,
+// goes straight through as soon as you drag it toward that gate: from right in front of it or
+// from across the board. Dragging it sideways past a gate never pulls it in.
+// Returns the square in front of the gate (with exitDir set to the way out), or null.
+// PUSH: how far toward the gate (in squares) your finger has to drag.
+const PUSH = 0.3;
 function gatePush(d, push) {
-  const sx = snapAxis(d.pos[0]);
-  const sy = snapAxis(d.pos[1]);
-  if (!Number.isInteger(sx) || !Number.isInteger(sy)) return null;
-  const s = d.reach.get(stateKey(sy, sx));
-  if (!s || !s.exitDir) return null;
-  const [vr, vc] = DIRS[s.exitDir];
-  return (d.target[0] - s.dc) * vc + (d.target[1] - s.dr) * vr >= push ? s : null;
+  for (const dir of dirsFor(d.block)) {
+    const [vr, vc] = DIRS[dir];
+    // locked exactly in line across the way out; along it, measure from the square it is
+    // leaving (it may already be part-way to the next one)
+    const across0 = snapAxis(vc ? d.pos[1] : d.pos[0]);
+    if (!Number.isInteger(across0)) continue;
+    const a = vc ? d.pos[0] : d.pos[1];
+    const base = vc + vr > 0 ? Math.floor(a + 1e-6) : Math.ceil(a - 1e-6);
+    const s = d.reach.get(vc ? stateKey(across0, base) : stateKey(base, across0));
+    if (!s) continue;
+    const along = (d.target[0] - s.dc) * vc + (d.target[1] - s.dr) * vr;
+    const across = vc ? d.target[1] - s.dr : d.target[0] - s.dc;
+    if (along < push || Math.abs(across) > 0.45) continue;
+    // walk toward the gate square by square: every square on the way must be free
+    let q = s;
+    while (q) {
+      if (tryStep(d.block, shiftCells(d.block.cells, q.dr, q.dc), dir).status === "exit") return Object.assign({}, q, { exitDir: dir });
+      q = d.block.jelly ? null : d.reach.get(stateKey(q.dr + vr, q.dc + vc)); // jelly: one square per drag
+    }
+  }
+  return null;
 }
-// light up the gate a lined-up block is being pushed toward
+// light up the gate a lined-up block is being dragged toward
 function showGateReady(d) {
   const s = gatePush(d, 0.12);
   const ex = s && findExit(d.block, shiftCells(d.block.cells, s.dr + DIRS[s.exitDir][0], s.dc + DIRS[s.exitDir][1]), s.exitDir);
@@ -586,6 +624,15 @@ const BOMB_HOT = 10; // seconds left when it starts to glow and throb
 function bombSeconds(n) {
   return Math.max(20, Math.round((n * BOMB_SECONDS_PER_MOVE) / 5) * 5);
 }
+// the dial: seconds left, and how much of the ring is still to burn
+function showFuse(b, digits = true) {
+  const bd = b.fuse;
+  bd.style.setProperty("--p", (b.bombLeft / b.bombFull).toFixed(4));
+  if (!digits) return;
+  const n = Math.ceil(b.bombLeft);
+  bd.firstChild.textContent = n;
+  bd.classList.toggle("d3", n >= 100);
+}
 // called by the level clock with the seconds that just passed (not while paused or frozen)
 function burnFuses(dt) {
   blocks.forEach((b) => {
@@ -593,7 +640,7 @@ function burnFuses(dt) {
     const before = Math.ceil(b.bombLeft);
     b.bombLeft = Math.max(0, b.bombLeft - dt);
     const now = Math.ceil(b.bombLeft);
-    if (now !== before && b.badge) b.badge.textContent = now;
+    if (b.fuse) showFuse(b, now !== before);
     if (b.el) b.el.classList.toggle("hot", b.bombLeft <= BOMB_HOT);
     if (b.bombLeft <= 0) hooks.boom(b);
   });
@@ -727,20 +774,24 @@ function exitBlock(block, el, state) {
   const shifted = shiftCells(block.cells, state.dr + vr, state.dc + vc);
   celebrateExit(block, findExit(block, shifted, state.exitDir));
 
-  // line it up exactly with the gate, then slide straight through; the edge of the grid hides
-  // the block as it goes
+  // line it up exactly with the gate (across the way out), then slide straight on from where it
+  // is, through the gate; the edge of the grid hides the block as it goes
   el.style.pointerEvents = "none";
   el.classList.add("gone");
+  const x1 = (Math.min(...cols) + state.dc + vc * colSpan) * STEP;
+  const y1 = (Math.min(...rows) + state.dr + vr * rowSpan) * STEP;
+  const x0 = vc ? parseFloat(el.style.left) : (Math.min(...cols) + state.dc) * STEP;
+  const y0 = vr ? parseFloat(el.style.top) : (Math.min(...rows) + state.dr) * STEP;
+  const ms = Math.round(200 + 45 * (Math.abs(x1 - x0) + Math.abs(y1 - y0)) / STEP);
   el.style.transition = "none";
-  el.style.left = (Math.min(...cols) + state.dc) * STEP + "px";
-  el.style.top = (Math.min(...rows) + state.dr) * STEP + "px";
+  el.style.left = x0 + "px";
+  el.style.top = y0 + "px";
   void el.offsetWidth;
-  el.style.transition =
-    "left 0.25s ease-in, top 0.25s ease-in, opacity 0.25s ease-in";
-  el.style.left = (Math.min(...cols) + state.dc + vc * colSpan) * STEP + "px";
-  el.style.top = (Math.min(...rows) + state.dr + vr * rowSpan) * STEP + "px";
+  el.style.transition = `left ${ms}ms ease-in, top ${ms}ms ease-in, opacity ${ms}ms ease-in`;
+  el.style.left = x1 + "px";
+  el.style.top = y1 + "px";
   el.style.opacity = "0.2";
-  setTimeout(() => el.remove(), 300);
+  setTimeout(() => el.remove(), ms + 50);
 
   refreshIce();
 

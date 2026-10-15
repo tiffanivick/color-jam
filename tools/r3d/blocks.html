@@ -1,0 +1,42 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Block look</title>
+<style>
+  body { margin: 0; padding: 14px; background: #3a1f2b; }
+  .board { display: inline-block; padding: 14px; border-radius: 22px; background: #2f6b4c; box-shadow: 0 0 0 3px #1d4a33, 0 10px 0 #173a28; }
+  .grid { position: relative; display: grid; grid-template-columns: repeat(6, 48px); gap: 6px; }
+  .cell { width: 48px; height: 48px; border-radius: 9px; background: linear-gradient(#fbf6ee, #efe6d8); box-shadow: inset 0 -3px 0 rgba(120, 90, 60, 0.12); }
+  .grid img { position: absolute; pointer-events: none; }
+</style></head>
+<body>
+<div class="board"><div class="grid" id="grid"></div></div>
+<script>const CELL = 48, STEP = 54;</script>
+<script src="../../src/block3d.js"></script>
+<script>
+// Every block colour on a 6x6 board, drawn by the game's own src/block3d.js.
+// ?zoom=2 shows it at full rendered resolution.
+const q = new URLSearchParams(location.search);
+if (q.get("zoom")) document.body.style.zoom = q.get("zoom");
+const BLOCKS = [
+  { color: "#ff5da2", cells: [[0, 0], [0, 1], [0, 2]] },
+  { color: "#ff8a3d", cells: [[1, 0], [1, 1], [2, 1]] },
+  { color: "#4d7bff", cells: [[1, 3], [2, 3], [2, 4], [3, 3]] },
+  { color: "#33cc7a", cells: [[2, 0], [3, 0], [4, 0], [4, 1]] },
+  { color: "#f5d90a", cells: [[3, 4], [3, 5], [4, 4], [4, 5]] },
+  { color: "#a855f7", cells: [[5, 1], [5, 2]] },
+  { color: "#22c3c3", cells: [[0, 5], [1, 5]] },
+  { color: "#ff4d5e", cells: [[4, 2]] },
+  { color: "#9aa0b4", cells: [[5, 4], [5, 5]] },
+];
+const grid = document.getElementById("grid");
+for (let i = 0; i < 36; i++) grid.appendChild(Object.assign(document.createElement("div"), { className: "cell" }));
+for (const b of BLOCKS) {
+  const r0 = Math.min(...b.cells.map((c) => c[0])), c0 = Math.min(...b.cells.map((c) => c[1]));
+  const body = Block3D.body(b.cells.map(([r, c]) => [r - r0, c - c0]), b.color);
+  const img = new Image();
+  img.src = body.src;
+  Object.assign(img.style, { left: c0 * STEP - body.pad + "px", top: r0 * STEP - body.pad + "px", width: body.w + "px", height: body.h + "px" });
+  grid.appendChild(img);
+}
+document.title = "done";
+</script>
+</body></html>
