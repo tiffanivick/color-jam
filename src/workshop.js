@@ -112,39 +112,45 @@ function renderWorkshop() {
   const W = S.workshop;
   const bp = blueprint(W.bp);
 
-  const stage = el("div", "mystery-stage");
-  if (W.boxes.length) {
-    stage.appendChild(mysteryBlock(W.boxes[0]));
-    stage.appendChild(
-      el("div", "mystery-note", (W.boxes.length > 1 ? "<b>" + W.boxes.length + "</b> mystery blocks · " : "") + (bpComplete() ? "Build your blueprint to open more" : "Tap twice to crack it open")),
-    );
-  } else {
-    stage.appendChild(el("div", "mystery-empty", "<b>No mystery blocks right now</b><span>Win a level to earn one. Three stars earns a gold one with an extra piece.</span>"));
-  }
-  host.appendChild(stage);
-
+  // the blueprint, always first and always the same size: the gadget is drawn faintly on the
+  // paper, and each piece you find fills its square in full colour
   const card = el("div", "bp-card" + (bpComplete() ? " full" : ""));
-  card.innerHTML = '<div class="bp-head"><div><div class="eyebrow">Blueprint ' + (W.bp + 1) + "</div><h3>" + bp.name + '</h3></div><div class="bp-count"><b id="bpCount">' + W.got.length + "</b>/" + PIECES + "</div></div>";
+  const reward = bp.gadget
+    ? '<span class="bp-chip">' + powerGlyph(bp.gadget) + "+" + bp.charges + '</span><span class="bp-chip"><i class="coin"></i>+' + bp.coins + "</span>"
+    : '<span class="bp-chip"><i class="coin"></i>+' + bp.coins + '</span><span class="bp-chip">+' + bp.gifts + " gadgets</span>";
+  card.innerHTML =
+    '<div class="bp-head"><div><div class="eyebrow">Blueprint ' + (W.bp + 1) + "</div><h3>" + bp.name + '</h3></div><div class="bp-reward">' + reward + "</div></div>" +
+    '<div class="bp-prog"><div class="bp-bar"><i id="bpBar"></i></div><b id="bpCount"></b></div>';
   const grid = el("div", "bp-grid");
-  grid.id = "bpGrid";
+  grid.style.setProperty("--art", artURL(bp.art));
   for (let i = 0; i < PIECES; i++) {
-    const got = W.got.includes(i);
-    const slot = el("div", "bp-slot" + (got ? " got" : ""), got ? "" : "<i>" + (i + 1) + "</i>");
+    const slot = el("div", "bp-slot" + (W.got.includes(i) ? " got" : ""));
     slot.dataset.i = i;
     slot.style.backgroundImage = artURL(bp.art);
     slot.style.backgroundPosition = (i % 3) * 50 + "% " + Math.floor(i / 3) * 50 + "%";
     grid.appendChild(slot);
   }
   card.appendChild(grid);
-  card.appendChild(
-    el("p", "bp-what", bp.gadget ? "Builds the <b>" + POWER_NAME[bp.gadget] + "</b>: " + POWER_TEXT[bp.gadget].toLowerCase() + "." : "Bonus build: <b>" + bp.coins + " coins</b> and " + bp.gifts + " gadgets."),
-  );
+  card.appendChild(el("p", "bp-what", bp.gadget ? "Builds the <b>" + POWER_NAME[bp.gadget] + "</b>: " + POWER_TEXT[bp.gadget].toLowerCase() + "." : "A bonus build. Every blueprint after this pays more."));
   if (bpComplete()) {
     const go = el("button", "btn-big green bp-build", "Build it!");
     go.addEventListener("click", () => buildBlueprint(card));
     card.appendChild(go);
   }
   host.appendChild(card);
+  showProgress();
+
+  // mystery blocks: a tray of fixed height under the blueprint, so nothing ever moves
+  const stage = el("div", "mystery-stage");
+  if (W.boxes.length) {
+    const m = mysteryBlock(W.boxes[0]);
+    if (W.boxes.length > 1) m.appendChild(el("span", "mystery-stack", "\u00d7" + W.boxes.length));
+    stage.appendChild(m);
+    stage.appendChild(el("div", "mystery-note", bpComplete() ? "Build your blueprint to open more" : "Tap twice to crack it open"));
+  } else {
+    stage.appendChild(el("div", "mystery-empty", '<i></i><b>No mystery blocks right now</b><span>Win a level to earn one. Three stars earns a gold one with an extra piece.</span>'));
+  }
+  host.appendChild(stage);
 
   host.appendChild(el("h3", "shelf-title", "Your gadgets"));
   const shelf = el("div", "list");
@@ -156,6 +162,14 @@ function renderWorkshop() {
     shelf.appendChild(row);
   });
   host.appendChild(shelf);
+}
+// pieces on the paper so far (counts the squares already filled in, so it ticks up as they land)
+function showProgress() {
+  const n = document.querySelectorAll(".bp-slot.got").length;
+  const c = $("bpCount");
+  if (c) c.textContent = n + "/" + PIECES;
+  const bar = $("bpBar");
+  if (bar) bar.style.width = (100 * n) / PIECES + "%";
 }
 
 // a big gold (or purple) 3D block wrapped in ribbon with a "?" on top
@@ -215,7 +229,7 @@ function openBox(wrap) {
     renderWorkshop();
     if (bpComplete()) {
       const b = document.querySelector(".bp-build");
-      if (b) b.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (b) b.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }, 300 + take.length * 380 + 750);
 }
@@ -266,9 +280,7 @@ function flyPiece(i, cx, cy) {
   ).onfinish = () => {
     p.remove();
     slot.classList.add("got", "pop");
-    slot.innerHTML = "";
-    const c = $("bpCount");
-    if (c) c.textContent = S.workshop.got.filter((g) => document.querySelector('.bp-slot.got[data-i="' + g + '"]')).length;
+    showProgress();
     Sfx.coin();
   };
 }

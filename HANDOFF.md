@@ -3,7 +3,7 @@
 Audience: an LLM coding agent (Claude Code) taking over development.
 Repo: `github.com/tiffanivick/color-jam` (branch `main`), deployed by GitHub Pages at
 `https://tiffanivick.github.io/color-jam/`. Owner plays it as an iPhone home-screen web app.
-Current live build: **40** (`?v=40`).
+Current live build: **41** (`?v=41`).
 
 ---
 
@@ -317,5 +317,7 @@ How the game uses them (`src/fx.js`):
   any CSS change.
 - `brick.js` inner corners: gap-crossing only when `R && D && RD` (prevents notches).
 - Hide broken blocks with `opacity: 0`, not `visibility` (clip-path id references).
+- `html` and `body` use `overflow: clip` (since build 41). `overflow: hidden` alone still let iPhone
+  drag the page sideways when the hammer's long handle or flying pieces stuck out past the screen.
 - Do not commit level-generation logs or `__pycache__`.
 - Keep commit-message attribution lines as the repo history shows.

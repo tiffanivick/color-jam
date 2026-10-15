@@ -591,7 +591,7 @@ function openChest() {
     return;
   }
   openSheet(
-    '<div class="sheet-body chest-sheet"><div class="chest-big" id="chestBig">' + ICON.chest + '</div><h3>You have a chest!</h3><p>Tap it to open.</p><div class="loot" id="loot"></div><button class="btn-big green" id="chestBtn" hidden>Awesome!</button></div>',
+    '<div class="sheet-body chest-sheet"><div class="chest-big" id="chestBig">' + ICON.chest + '</div><h3>' + (S.chests > 1 ? "You have " + S.chests + " chests!" : "You have a chest!") + '</h3><p>Tap it to open.</p><div class="loot" id="loot"></div><button class="btn-big green" id="chestBtn" hidden>Awesome!</button></div>',
   );
   let opened = false;
   $("chestBig").addEventListener("click", () => {
@@ -615,10 +615,14 @@ function openChest() {
       r.style.animationDelay = 0.35 + i * 0.25 + "s";
       box.appendChild(r);
     });
-    $("chestBtn").hidden = false;
-    $("chestBtn").addEventListener("click", () => {
+    // more chests waiting? the button goes straight on to the next one
+    const next = $("chestBtn");
+    if (S.chests > 0) next.textContent = "Next chest (" + S.chests + " left)";
+    next.hidden = false;
+    next.addEventListener("click", () => {
       closeSheet();
       renderHome();
+      if (S.chests > 0) openChest();
     });
     save();
     renderTop();
