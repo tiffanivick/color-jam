@@ -6,7 +6,7 @@
 // Needs CELL and STEP from engine.js. Preview every look: tools/r3d/blocks.html.
 
 const Block3D = (() => {
-  const PAD = 14; // px around the footprint for the shadow
+  const PAD = 8; // px around the footprint for the shadow (it stays inside the 6px gap)
   const KOB = 0.5; // how far up the screen one unit of height moves (oblique camera)
   const FS = `#version 300 es
 precision highp float;
@@ -60,11 +60,13 @@ void main(){
   for (int i=0;i<120;i++){ h = map(ro+rd*t); if(h.x<0.0006){hit=true;break;} t+=h.x; if(t>2.) break; }
   vec3 L = normalize(vec3(-0.55, 1.25, -0.8));
   if (!hit) {
-    // the board under it: soft shadow toward the lower right, darkest at the block's foot
+    // the board under it: a tight contact shadow, cast nearly straight down, that stays inside
+    // the gap around the block (a wider one spilled onto neighbours and made blocks look bigger)
     vec3 p = ro + rd*(ro.y / -rd.y);
-    float sh = 1. - soft(p + vec3(0.,0.002,0.), L);
-    float a = 0.42*sh + 0.3*exp(-body(p)*14.);
-    o = vec4(vec3(0.04,0.02,0.12)*a, clamp(a,0.,0.6)); // premultiplied
+    float d = body(p);
+    float sh = 1. - soft(p + vec3(0.,0.002,0.), normalize(vec3(-0.25, 1.6, -0.35)));
+    float a = (0.3*sh + 0.3*exp(-d*28.)) * smoothstep(0.11, 0.03, d);
+    o = vec4(vec3(0.04,0.02,0.12)*a, clamp(a,0.,0.55)); // premultiplied
     return; }
   vec3 p = ro+rd*t, n = nrm(p), v = -rd;
   float a = ao(p,n);
