@@ -28,6 +28,7 @@ function startLevel() {
   const t = tierOf(L);
   const tile = (id) =>
     '<button class="pre-tile' + (preSel[id] && S.inv[id] > 0 ? " on" : "") + '" data-id="' + id + '">' + ICON[id] + '<em class="pre-n">' + (S.inv[id] > 0 ? S.inv[id] : "+") + '</em><i class="pre-check">' + ICON.check + "</i></button>";
+  let playing = false;
   openSheet(
     '<button class="x-btn" id="preX" aria-label="Close">✕</button><div class="ribbon">Level ' + (idx + 1) + "</div>" +
       (S.vault.n > 0 ? '<div class="streak-sign"><small>Streak</small><b>' + S.vault.n + "</b></div>" : "") +
@@ -35,7 +36,14 @@ function startLevel() {
       "<div><b>" + (t ? L.difficulty + " level" : WORLDS[L.world].name) + "</b><span>" + (t ? "Take your time and plan ahead" : (L.difficulty || "Easy") + " · " + (L.rows || 6) + "×" + (L.cols || 6) + " board") + "</span></div></div>" +
       '<h4 class="pre-h">Select boosters:</h4><div class="pre-row">' + PRE.map(tile).join("") + '</div><p class="pre-hint" id="preHint">Hourglass: +30 seconds. Rocket: knocks a block out at the start.</p>' +
       '<button class="btn-big green" id="preGo">Play</button></div>',
-    { cls: "dismissable pre-sheet" },
+    {
+      cls: "dismissable pre-sheet",
+      // closing the card without playing (✕ or tapping outside) goes Home if it was opened over
+      // the play screen, e.g. from Continue on Level Complete, instead of leaving a finished board
+      onClose: () => {
+        if (!playing && !$("game").hidden) leaveLevel();
+      },
+    },
   );
   $("preX").addEventListener("click", closeSheet);
   $("sheet").querySelectorAll(".pre-tile").forEach((b) =>
@@ -56,6 +64,7 @@ function startLevel() {
     }),
   );
   $("preGo").addEventListener("click", () => {
+    playing = true;
     closeSheet();
     const use = PRE.filter((id) => preSel[id] && S.inv[id] > 0);
     $("hub").hidden = true;
