@@ -3,7 +3,7 @@
 Audience: an LLM coding agent (Claude Code) taking over development.
 Repo: `github.com/tiffanivick/color-jam` (branch `main`), deployed by GitHub Pages at
 `https://tiffanivick.github.io/color-jam/`. Owner plays it as an iPhone home-screen web app.
-Current live build: **48** (`?v=48`).
+Current live build: **50** (`?v=50`).
 
 ---
 
@@ -66,7 +66,9 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
 ## 2. Core mechanics & rules
 
 ### 2.1 Grid
-- Per-level `rows × cols` (typically 6×7 … 7×6). Constants in `engine.js`: `CELL = 48`, `GAP = 6`,
+- Per-level `rows × cols` (5×5 up to 8×8 since build 49; `tools/regrid.py` grew chosen levels onto
+  7×7 / 8×7 / 8×8 boards). `fitBoard()` scales `#boardScale` down when a board is bigger than the
+  space; dragging divides finger distances by that scale (`drag.k`), aiming uses `boardPoint()`. Constants in `engine.js`: `CELL = 48`, `GAP = 6`,
   `STEP = 54` (cell pitch), `PADDING = 0`, `BORDER = 14`.
 - Board-local pixel position of cell `(r, c)`: `x = PADDING + c*STEP`, `y = PADDING + r*STEP`.
   The board may be CSS-scaled to fit the phone: convert pointer coordinates with
@@ -78,7 +80,9 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
   Blocks never merge or split. Each block is one `.block-group` element containing `.block-cell` divs
   (for hit-testing) plus the SVG body from `brick.js`.
 - Dragging: `computeReachable(block)` floods every square-aligned offset reachable through empty space.
-  The drag follows the pointer inside that set, and `endDrag()` snaps to the nearest legal resting spot.
+  The drag follows the pointer inside that set, and `endDrag()` snaps to the nearest legal resting spot. The drawn position follows the
+  finger with a time-based ease (`GLIDE_MS` 42) and a light snap onto squares (`SNAP` 0.14), so it
+  feels the same at 60 and 120 Hz.
 - Exiting: `findExit()` checks for a gate of the block's colour on the side it is moving toward, and that
   **all** of its cells fit inside the gate's span. `exitPathClear()` stops a block from passing through
   other blocks on the way out.
@@ -117,7 +121,8 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
 - **Loss:** the level timer reaches 0 (`timeUp()`, with a continue offer for coins), or a bomb fuse
   reaches 0.
 - Timer: starts on the first move (`startTimer`). Freeze pauses it for 10 s.
-- Stars: `starsFor(moves, par)`: 3 if `moves ≤ par`, 2 if `≤ par+2`, otherwise 1.
+- Stars (build 49, `starCut(par)`): 3 if `moves ≤ ceil(par·1.5)+1`, 2 if `≤ par·2+3`, otherwise 1.
+  Par is what someone who knows the answer needs; the margin is for working it out.
 
 ### 2.4 Power-ups (logic, unchanged and working)
 - Inventory `S.inv = {undo, hammer, freeze, vacuum}`. Prices: undo 20, hammer 40, freeze 30, vacuum 80.
@@ -169,6 +174,39 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
   while a gadget is picked the button shows it and tapping it puts it away.
 - Home: the Workshop is a strip at the foot of the world card (`renderWsStrip()`); the win sheet's
   mystery-block note is an "Open it now" button to the Workshop.
+
+### 2.7 Color Block Jam layout (build 50)
+The owner sent Color Block Jam screenshots as the target look. Everything in `style.css` under
+"BUILD 50" overrides the older rules above it.
+- **Home**: a top bar (avatar → Trophies, stars, coins with a green + → Shop, a gear → Settings sheet
+  with Sound and Realistic blocks). Below it the **Vault Run** bar. Round event buttons run down both
+  sides (`evButton()`): Workshop, Chests, Rush on the left; Daily Quest (time until midnight), Vault,
+  Login day on the right. The middle is the level path (`#lvPath`): the current level is a big green
+  block, with the next two above it (purple = Hard, red = Very hard, skull badge, lock). Below that
+  are the world strip (progress with chest marks; it opens Collection) and the big **Level N** button.
+  The world mosaic card and the tiles are gone.
+- **Tab bar**: Shop, Map, Home, Collection, Trophies. The tabs are chunky SVG icons (`ICON.tab*`);
+  only the active tab is raised and labelled. Quests have no tab: open them from the Daily side button.
+- **Level card** (`startLevel()`): a pop-up before every level, with level info and a Hard warning.
+  It offers two new pre-level boosters, **Hourglass** (+30 s) and **Rocket** (`launchRocket()`: it
+  flies in and pops one random needed block; history is reset afterwards). Both are in `S.inv`
+  (starting at 2 each) and sold in the Shop (60 / 100 coins). Tapping one you have none of buys it.
+- **Play screen**: a light background. The round level badge and the Time panel (`#timer`, mm:ss)
+  sit on top, with restart (orange) and pause (blue) square buttons. Pause opens a sheet with Resume,
+  Sound and Home; there is no back button now. Moves, star goals and coins sit in a row below. The
+  board frame is slate (the `#game` variables override the world's). Boosters are round bubbles with
+  count badges, shown in the order Freeze, Hammer, Vacuum, Undo, Gadgets.
+- **Level Complete** (`showWin()`): full screen. It shows the outlined title, stars, a coin pile
+  (`coinPile()`) counting up, reward chips (the mystery block → Workshop, chest, ticket, vault prize),
+  and Continue. Continue leads to the next level card. The Vault Run strip sits at the bottom.
+- **Vault Run** (`S.vault = {n, round}`): this is the "Block Heist" from the reference. Each win adds
+  1. The run resets to 0 (`breakStreak()`) when you choose Try again or Home after a time-up or bomb,
+  or when you restart or leave a level after a move (`confirmLeave()` asks first). Prizes
+  (`VAULT_PRIZES`): 3 → 25 coins; 6 → Hourglass and Rocket; 10 → 150 coins, 2 gold mystery blocks,
+  a Rocket and a Hammer, after which a new round starts.
+- **Collection** (`renderCollection()`): every world's brick picture is an album card with a progress
+  bar; tapping a card shows the full picture. **Daily Quest** looks like a spiral notebook, with the
+  login days in a yellow card.
 
 ## 3. Power-up visual spec (CRITICAL)
 

@@ -354,7 +354,7 @@ const DIRS = {
 };
 
 const MAX_STEP = 0.1; // squares moved per tiny step toward the pointer
-const SNAP = 0.22; // how strongly blocks lock onto squares: 0 = off, just under 0.5 = very strong
+const SNAP = 0.14; // how strongly blocks lock onto squares: 0 = off, just under 0.5 = very strong
 
 // Maps a position (in squares) to where the block is drawn. Within SNAP of a
 // square the block locks onto it; between squares it glides across.
@@ -534,8 +534,10 @@ function gatePush(d, push) {
     const [vr, vc] = DIRS[dir];
     // locked exactly in line across the way out; along it, measure from the square it is
     // leaving (it may already be part-way to the next one)
-    const across0 = snapAxis(vc ? d.pos[1] : d.pos[0]);
-    if (!Number.isInteger(across0)) continue;
+    // (a looser test than the drawn snap: within 0.3 of a square's line counts as in line)
+    const ac = vc ? d.pos[1] : d.pos[0];
+    const across0 = Math.round(ac);
+    if (Math.abs(ac - across0) > 0.3) continue;
     const a = vc ? d.pos[0] : d.pos[1];
     const base = vc + vr > 0 ? Math.floor(a + 1e-6) : Math.ceil(a - 1e-6);
     const s = d.reach.get(vc ? stateKey(across0, base) : stateKey(base, across0));
@@ -563,8 +565,9 @@ function showGateReady(d) {
 }
 
 // The block eases toward where the pointer wants it each frame, instead of
-// jumping there, so movement feels soft. GLIDE: 1 = instant, lower = softer.
-const GLIDE = 0.4;
+// jumping there, so movement feels soft. GLIDE_MS: how quickly it catches up (time-based, so it
+// feels the same at 60 and 120 frames a second); higher = softer.
+const GLIDE_MS = 42;
 
 function showPos(d) {
   d.tx = d.baseLeft + snapAxis(d.pos[0]) * STEP;
@@ -575,10 +578,14 @@ function showPos(d) {
 function glide(d) {
   d.raf = 0;
   if (d.stopped) return;
+  const now = performance.now();
+  const dt = Math.min(50, now - (d.lastGlide || now - 16));
+  d.lastGlide = now;
+  const k = 1 - Math.exp(-dt / GLIDE_MS);
   const cx = parseFloat(d.el.style.left);
   const cy = parseFloat(d.el.style.top);
-  let nx = cx + (d.tx - cx) * GLIDE;
-  let ny = cy + (d.ty - cy) * GLIDE;
+  let nx = cx + (d.tx - cx) * k;
+  let ny = cy + (d.ty - cy) * k;
   if (Math.abs(d.tx - nx) < 0.4) nx = d.tx;
   if (Math.abs(d.ty - ny) < 0.4) ny = d.ty;
   d.el.style.left = nx + "px";
@@ -622,6 +629,8 @@ function setupDrag(b, el) {
       rects: buildRects(reach),
       pos: [0, 0],
       target: [0, 0],
+      // the board may be scaled to fit the screen: finger distances are divided by this
+      k: boardEl.getBoundingClientRect().width / boardEl.offsetWidth || 1,
       startX: e.clientX,
       startY: e.clientY,
       baseLeft: c0 * STEP,
@@ -841,7 +850,7 @@ function exitBlock(block, el, state) {
 
 window.addEventListener("pointermove", (e) => {
   if (!drag) return;
-  drag.target = [(e.clientX - drag.startX) / STEP, (e.clientY - drag.startY) / STEP];
+  drag.target = [(e.clientX - drag.startX) / (STEP * drag.k), (e.clientY - drag.startY) / (STEP * drag.k)];
   dragTo(drag, drag.target[0], drag.target[1]);
   showPos(drag);
   // a comet launches the moment it's flicked (no need to let go)
@@ -904,7 +913,7 @@ function endDrag() {
     if (gate) return exitBlock(block, el, gate);
   }
 
-  el.style.transition = block.comet ? "left 0.24s cubic-bezier(.25,.1,.25,1), top 0.24s cubic-bezier(.25,.1,.25,1)" : "left 0.12s ease-out, top 0.12s ease-out";
+  el.style.transition = block.comet ? "left 0.24s cubic-bezier(.25,.1,.25,1), top 0.24s cubic-bezier(.25,.1,.25,1)" : "left 0.18s cubic-bezier(.2,.8,.3,1), top 0.18s cubic-bezier(.2,.8,.3,1)";
   el.style.left = baseLeft + best.dc * STEP + "px";
   el.style.top = baseTop + best.dr * STEP + "px";
   if (best.dr !== 0 || best.dc !== 0) {

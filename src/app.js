@@ -19,7 +19,9 @@ const defaults = () => ({
   starsTotal: 0,
   coins: 60,
   chests: 0, // chests waiting to be opened
-  inv: { undo: 2, hammer: 1, freeze: 2, vacuum: 1, magnet: 0, ghost: 0, saw: 0, paint: 0 },
+  inv: { undo: 2, hammer: 1, freeze: 2, vacuum: 1, magnet: 0, ghost: 0, saw: 0, paint: 0, hourglass: 2, rocket: 2 },
+  // Vault Run (build 50): levels won in a row without failing; 10 cracks the vault
+  vault: { n: 0, round: 0, got: [] },
   // the Workshop (workshop.js): mystery blocks waiting to be opened ("gold" ones hold an extra
   // piece), the blueprint being collected, the pieces of it you have, and how many you've built
   workshop: { boxes: ["gold"], bp: 0, got: [], built: 0 },
@@ -117,6 +119,21 @@ const ICON = {
   quest: '<svg viewBox="0 0 48 48"><rect x="9" y="6" width="30" height="36" rx="5" fill="#fff1d6"/><rect x="9" y="6" width="30" height="36" rx="5" fill="none" stroke="#b78a4a" stroke-width="2"/><path d="M15 18h18M15 26h18M15 34h11" stroke="#b78a4a" stroke-width="3" stroke-linecap="round"/><path d="m31 33 3 3 6-7" fill="none" stroke="#25b86b" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   flame: '<svg viewBox="0 0 48 48"><path d="M24 4c2 8 11 12 11 24a11 11 0 0 1-22 0c0-5 3-8 5-11 1 3 2 4 4 5-1-8 0-12 2-18Z" fill="#ff8a3d"/><path d="M24 22c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-7 1 2 2 2 3 3-1-4-1-6 0-8Z" fill="#ffd447"/></svg>',
   sndOn: '<path d="M4 9v6h4l5 4V5L8 9H4Zm12.5 3a3.5 3.5 0 0 0-2-3.2v6.4a3.5 3.5 0 0 0 2-3.2ZM14.5 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6Z"/>',
+  // build 50: Color Block Jam style art
+  vault: '<svg viewBox="0 0 48 48"><g stroke="#7d6648" stroke-width="1.8"><ellipse cx="15" cy="12.5" rx="4.6" ry="2.6" fill="#f7eddc"/><ellipse cx="24" cy="12.5" rx="4.6" ry="2.6" fill="#f7eddc"/><ellipse cx="33" cy="12.5" rx="4.6" ry="2.6" fill="#f7eddc"/><rect x="6" y="13" width="36" height="30" rx="7" fill="#efe2cc"/><rect x="11" y="18" width="26" height="20" rx="4" fill="#dccbab"/><circle cx="24" cy="28" r="6.4" fill="#f7eddc"/></g><path d="M24 21.6v12.8M17.6 28h12.8" stroke="#7d6648" stroke-width="1.8"/><circle cx="24" cy="28" r="2.2" fill="#7d6648"/></svg>',
+  rocket: '<svg viewBox="0 0 48 48"><path d="M24 3 32.5 15h-17Z" fill="#ffb020" stroke="#9a4a00" stroke-width="2" stroke-linejoin="round"/><path d="M15.5 31 9 39h8M32.5 31 39 39h-8" fill="#ffb020" stroke="#9a4a00" stroke-width="2" stroke-linejoin="round"/><rect x="15.5" y="14" width="17" height="23" rx="3.5" fill="#ff4d5e" stroke="#8a1f28" stroke-width="2"/><path d="M16.5 21h15M16.5 28.5h15" stroke="#ffd447" stroke-width="3.6"/><path d="M20.5 38h7L24 46Z" fill="#ffd447" stroke="#e88a00" stroke-width="1.4" stroke-linejoin="round"/></svg>',
+  hourglass: '<svg viewBox="0 0 48 48"><path d="M13.5 9.5c0 9 8.5 10.5 8.5 14.5s-8.5 5.5-8.5 14.5h21c0-9-8.5-10.5-8.5-14.5s8.5-5.5 8.5-14.5Z" fill="#d6f2ff" stroke="#3a86c8" stroke-width="2"/><path d="M17.5 37c2.5-5 5.5-6 6.5-8.5 1 2.5 4 3.5 6.5 8.5Z" fill="#ffc83a"/><path d="M19 14h10c-1.5 3-4 4-5 6.5-1-2.5-3.5-3.5-5-6.5Z" fill="#ffc83a"/><ellipse cx="24" cy="8" rx="13.5" ry="4.2" fill="#ffb020" stroke="#9a5a00" stroke-width="2"/><ellipse cx="24" cy="40" rx="13.5" ry="4.2" fill="#ffb020" stroke="#9a5a00" stroke-width="2"/></svg>',
+  skull: '<svg viewBox="0 0 48 48"><path d="M24 2l5.6 9.4 10.8-2.2-2.6 10.6L46 27l-10.4 3.6-.6 11L24 36.6l-11 5-.6-11L2 27l8.2-7.2L7.6 9.2l10.8 2.2Z" fill="#ffc83a" stroke="#9a5a00" stroke-width="2" stroke-linejoin="round"/><path d="M24 13.5c-6 0-9 4-9 8.5 0 3 1.5 4.6 3 5.5V31h12v-3.5c1.5-.9 3-2.5 3-5.5 0-4.5-3-8.5-9-8.5Z" fill="#fff" stroke="#3a2a10" stroke-width="1.6"/><circle cx="20.4" cy="22.5" r="2.4" fill="#3a2a10"/><circle cx="27.6" cy="22.5" r="2.4" fill="#3a2a10"/><path d="M22 31v-3M26 31v-3" stroke="#3a2a10" stroke-width="1.4"/></svg>',
+  block: '<svg viewBox="0 0 48 48"><rect x="3" y="5" width="42" height="40" rx="10" fill="#e9a400"/><rect x="3" y="3" width="42" height="38" rx="10" fill="#ffc83a"/><g fill="#ffd96a" stroke="#e5a100" stroke-width="2"><circle cx="15.5" cy="15" r="6.2"/><circle cx="32.5" cy="15" r="6.2"/><circle cx="15.5" cy="30" r="6.2"/><circle cx="32.5" cy="30" r="6.2"/></g></svg>',
+  gift: '<svg viewBox="0 0 48 48"><path d="M24 13c-3-7-12-8-11-2 .6 3 6 3 11 2Zm0 0c3-7 12-8 11-2-.6 3-6 3-11 2Z" fill="#ffd447" stroke="#9a5a00" stroke-width="2"/><rect x="7" y="13" width="34" height="10" rx="3" fill="#ff5d7a" stroke="#8a1f3a" stroke-width="2"/><rect x="10" y="22" width="28" height="21" rx="3" fill="#ff7a94" stroke="#8a1f3a" stroke-width="2"/><path d="M24 13v30" stroke="#ffd447" stroke-width="6"/></svg>',
+  face: '<svg viewBox="0 0 48 48"><ellipse cx="16" cy="10" rx="5.4" ry="2.8" fill="#ffd96a" stroke="#b07800" stroke-width="1.6"/><ellipse cx="32" cy="10" rx="5.4" ry="2.8" fill="#ffd96a" stroke="#b07800" stroke-width="1.6"/><rect x="5" y="10" width="38" height="33" rx="10" fill="#ffc83a" stroke="#b07800" stroke-width="2"/><ellipse cx="18" cy="24" rx="4.4" ry="5.4" fill="#fff" stroke="#3a2a10" stroke-width="1.5"/><ellipse cx="30" cy="24" rx="4.4" ry="5.4" fill="#fff" stroke="#3a2a10" stroke-width="1.5"/><circle cx="19" cy="25" r="2.3" fill="#3a2a10"/><circle cx="31" cy="25" r="2.3" fill="#3a2a10"/><path d="M19.5 33.5q4.5 3.6 9 0" fill="none" stroke="#3a2a10" stroke-width="2.2" stroke-linecap="round"/><circle cx="11.5" cy="31" r="2.6" fill="#ff8a6a" opacity=".6"/><circle cx="36.5" cy="31" r="2.6" fill="#ff8a6a" opacity=".6"/></svg>',
+  gear: '<svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="17" fill="none" stroke="#9a5a00" stroke-width="11" stroke-dasharray="6.4 6.95"/><circle cx="24" cy="24" r="17" fill="none" stroke="#ffc83a" stroke-width="7.4" stroke-dasharray="4.8 8.55" stroke-dashoffset="-0.8"/><circle cx="24" cy="24" r="13" fill="#ffc83a" stroke="#9a5a00" stroke-width="2.4"/><circle cx="24" cy="24" r="6" fill="#3f7fe0" stroke="#9a5a00" stroke-width="2.4"/></svg>',
+  calendar: (d) => '<svg viewBox="0 0 48 48"><rect x="7" y="10" width="34" height="32" rx="6" fill="#fff" stroke="#2e3f78" stroke-width="2"/><path d="M7 17a7 7 0 0 1 7-7h20a7 7 0 0 1 7 7v4H7Z" fill="#ff5d5d" stroke="#2e3f78" stroke-width="2"/><rect x="14" y="5" width="4.4" height="10" rx="2.2" fill="#2e3f78"/><rect x="29.6" y="5" width="4.4" height="10" rx="2.2" fill="#2e3f78"/><text x="24" y="37.5" text-anchor="middle" font-family="Bagel Fat One, sans-serif" font-size="15" fill="#2e3f78">' + d + "</text></svg>",
+  tabShop: '<svg viewBox="0 0 48 48"><rect x="8" y="21" width="32" height="21" rx="3" fill="#3f7fe0" stroke="#1d3f7a" stroke-width="2"/><path d="M6 13h36l-2 9a4.2 4.2 0 0 1-8 0 4.2 4.2 0 0 1-8 0 4.2 4.2 0 0 1-8 0 4.2 4.2 0 0 1-8 0Z" fill="#ff7a3d" stroke="#8a3a10" stroke-width="2" stroke-linejoin="round"/><path d="M16 13l-1 9M24 13v9M32 13l1 9" stroke="#fff" stroke-width="2.6" opacity=".8"/><circle cx="24" cy="32" r="7.5" fill="#ffc83a" stroke="#9a5a00" stroke-width="2"/><circle cx="24" cy="32" r="4" fill="none" stroke="#e59a10" stroke-width="2"/></svg>',
+  tabMap: '<svg viewBox="0 0 48 48"><path d="M5 12l12-4.5 14 4.5 12-4.5v29l-12 4.5-14-4.5-12 4.5Z" fill="#8ce6ac" stroke="#1e6a44" stroke-width="2" stroke-linejoin="round"/><path d="M17 7.5v29M31 12v29" stroke="#1e6a44" stroke-width="2"/><path d="M10 31c4-2 6-8 12-6s8-4 13-8" fill="none" stroke="#ff4d5e" stroke-width="2.6" stroke-dasharray="3 3.4" stroke-linecap="round"/><circle cx="36.5" cy="15.5" r="3.4" fill="#ff4d5e" stroke="#8a1f28" stroke-width="1.4"/></svg>',
+  tabHome: '<svg viewBox="0 0 48 48"><rect x="3" y="7" width="23" height="19" rx="4.5" fill="#ffc83a" stroke="#9a6a00" stroke-width="2"/><rect x="24" y="11" width="20" height="23" rx="4.5" fill="#b06cf0" stroke="#5a2a8a" stroke-width="2"/><rect x="11" y="21" width="22" height="22" rx="4.5" fill="#3ccf6e" stroke="#1a6a36" stroke-width="2"/><g fill="#86f0a8"><circle cx="17.5" cy="28" r="2.8"/><circle cx="26.5" cy="28" r="2.8"/><circle cx="17.5" cy="36.5" r="2.8"/><circle cx="26.5" cy="36.5" r="2.8"/></g><g fill="#ffe08a"><circle cx="10" cy="13.5" r="2.6"/><circle cx="18.5" cy="13.5" r="2.6"/></g></svg>',
+  tabBook: '<svg viewBox="0 0 48 48"><rect x="9" y="5" width="31" height="38" rx="5" fill="#6a3ad0" stroke="#33157a" stroke-width="2"/><rect x="13" y="5" width="27" height="33" rx="4" fill="#9a6af5"/><path d="M9.5 38.5h28" stroke="#ffd447" stroke-width="3"/><rect x="17" y="12" width="17" height="17" rx="4" fill="#ffc83a" stroke="#9a6a00" stroke-width="2"/><g fill="#ffe08a"><circle cx="22" cy="17" r="2.2"/><circle cx="29" cy="17" r="2.2"/><circle cx="22" cy="24" r="2.2"/><circle cx="29" cy="24" r="2.2"/></g></svg>',
+  tabTrophy: '<svg viewBox="0 0 48 48"><path d="M14 10H8.5a6 6 0 0 0 7 8.5M34 10h5.5a6 6 0 0 1-7 8.5" fill="none" stroke="#9a5a00" stroke-width="2.6"/><path d="M14 5h20v11a10 10 0 0 1-20 0Z" fill="#ffc83a" stroke="#9a5a00" stroke-width="2"/><rect x="21" y="25" width="6" height="8" fill="#e8a020"/><rect x="12" y="32" width="24" height="10" rx="3" fill="#b06cf0" stroke="#5a2a8a" stroke-width="2"/><path d="M24 8.5l1.6 3.3 3.6.5-2.6 2.5.6 3.6-3.2-1.7-3.2 1.7.6-3.6-2.6-2.5 3.6-.5Z" fill="#fff6c0"/></svg>',
   sndOff: '<path d="M4 9v6h4l5 4V5L8 9H4Zm13.6 3 2.4-2.4-1.4-1.4-2.4 2.4-2.4-2.4-1.4 1.4 2.4 2.4-2.4 2.4 1.4 1.4 2.4-2.4 2.4 2.4 1.4-1.4-2.4-2.4Z"/>',
 };
 
@@ -126,7 +143,7 @@ let worldStart = []; // global index of the first level of each world
 let worldCount = []; // how many levels in each world
 
 async function loadLevels() {
-  const res = await fetch("levels.json?v=1");
+  const res = await fetch("levels.json?v=50");
   LEVELS = await res.json();
   WORLDS.forEach((_, w) => {
     const idxs = LEVELS.map((l, i) => (l.world === w ? i : -1)).filter((i) => i >= 0);
@@ -144,8 +161,8 @@ const currentWorld = () => (allDone() ? WORLDS.length - 1 : worldOfLevel(S.clear
 // ECONOMY (rebalanced in build 42): a level pays about 15-30 coins, so a power-up costs a few
 // levels of play and the free ones from chests and the Workshop feel like real prizes.
 const TIER_BONUS = { Easy: 0, Normal: 2, Hard: 5, "Very hard": 10 };
-const COST = { undo: 40, hammer: 120, freeze: 80, vacuum: 200, magnet: 220, ghost: 150, saw: 130, paint: 180 };
-const POWER_NAME = { undo: "Undo", hammer: "Hammer", freeze: "Time Freeze", vacuum: "Vacuum", magnet: "Magnet", ghost: "Ghost", saw: "Saw", paint: "Rainbow Brush" };
+const COST = { undo: 40, hammer: 120, freeze: 80, vacuum: 200, magnet: 220, ghost: 150, saw: 130, paint: 180, hourglass: 60, rocket: 100 };
+const POWER_NAME = { undo: "Undo", hammer: "Hammer", freeze: "Time Freeze", vacuum: "Vacuum", magnet: "Magnet", ghost: "Ghost", saw: "Saw", paint: "Rainbow Brush", hourglass: "Hourglass", rocket: "Rocket" };
 const POWER_TEXT = {
   undo: "Take back your last move",
   hammer: "Smash any one block off the board",
@@ -155,6 +172,8 @@ const POWER_TEXT = {
   ghost: "One block slides straight through the others",
   saw: "Cuts one square off a block",
   paint: "Paints a block rainbow: any gate will take it",
+  hourglass: "Pick it before a level: +30 seconds on the clock",
+  rocket: "Pick it before a level: knocks one block out at the start",
 };
 
 // ---------------------------------------------------------------- theme + background
@@ -240,7 +259,7 @@ function openSheet(html, opts = {}) {
   const sheet = $("sheet");
   sheet.className = "sheet " + (opts.cls || "");
   sheet.innerHTML = html;
-  $("modal").classList.remove("hidden");
+  $("modal").className = "overlay " + (opts.over || "");
   sheetClose = opts.onClose || null;
   return sheet;
 }
@@ -274,16 +293,38 @@ function renderTop() {
   $("coinCount").textContent = S.coins;
   $("starCount").textContent = S.starsTotal;
   $("gameCoins").textContent = S.coins;
-  $("soundIcon").innerHTML = Sfx.isMuted() ? ICON.sndOff : ICON.sndOn;
   updateBoosters();
 }
-$("soundBtn").addEventListener("click", () => {
-  S.muted = !S.muted;
-  Sfx.setMuted(S.muted);
-  save();
-  renderTop();
-  if (!S.muted) Sfx.tap();
-});
+// the gear: settings (sound, block style)
+$("soundBtn").innerHTML = ICON.gear;
+$("avatarBtn").innerHTML = ICON.face;
+document.querySelectorAll(".tab-ic").forEach((i) => (i.innerHTML = ICON[i.dataset.ic]));
+$("avatarBtn").addEventListener("click", () => showPane("Trophies"));
+$("coinPlus").addEventListener("click", () => showPane("Shop"));
+function openSettings() {
+  const row = (id, label, on) => '<button class="set-row" id="' + id + '"><span>' + label + '</span><i class="toggle' + (on ? " on" : "") + '"></i></button>';
+  openSheet(
+    '<div class="ribbon">Settings</div><div class="sheet-body small"><div class="set-list">' +
+      row("setSound", "Sound", !S.muted) + row("setSkin", "Realistic blocks", S.skin === "real") +
+      '</div><button class="btn-big green" id="setDone">Done</button></div>',
+    { cls: "dismissable" },
+  );
+  $("setSound").addEventListener("click", () => {
+    S.muted = !S.muted;
+    Sfx.setMuted(S.muted);
+    save();
+    if (!S.muted) Sfx.tap();
+    $("setSound").querySelector(".toggle").classList.toggle("on", !S.muted);
+  });
+  $("setSkin").addEventListener("click", () => {
+    S.skin = S.skin === "real" ? "classic" : "real";
+    save();
+    applySkin();
+    $("setSkin").querySelector(".toggle").classList.toggle("on", S.skin === "real");
+  });
+  $("setDone").addEventListener("click", closeSheet);
+}
+$("soundBtn").addEventListener("click", openSettings);
 document.addEventListener("pointerdown", (e) => {
   if (e.target.closest("button")) {
     Sfx.unlock();
@@ -303,6 +344,8 @@ function showPane(name) {
   if (name === "Shop") renderShop();
   if (name === "Trophies") renderTrophies();
   if (name === "Workshop") renderWorkshop();
+  if (name === "Collection") renderCollection();
+  document.body.classList.toggle("on-home", name === "Home");
 }
 $("tabbar").addEventListener("click", (e) => {
   const t = e.target.closest(".tab");
@@ -315,56 +358,168 @@ function showHub(pane = activePane) {
 }
 
 // ---------------------------------------------------------------- home
+// Laid out like Color Block Jam: the Vault Run bar on top, round event buttons down both sides,
+// the next levels as a path of blocks in the middle, then the world strip and a big Level button.
+const tierOf = (lv) => ({ Hard: "hard", "Very hard": "very-hard" })[lv && lv.difficulty] || "";
+function untilMidnight() {
+  const now = new Date();
+  const end = new Date(now);
+  end.setHours(24, 0, 0, 0);
+  const m = Math.max(1, Math.round((end - now) / 60000));
+  return Math.floor(m / 60) + "h " + pad(m % 60) + "m";
+}
+function evButton(node, icon, label, badge, glow) {
+  node.innerHTML = '<span class="ev-ring">' + icon + '</span><span class="ev-label">' + label + "</span>" + (badge ? '<em class="badge">' + badge + "</em>" : "");
+  node.classList.toggle("glow", !!glow);
+}
 function renderHome() {
   const w = currentWorld();
   setTheme(w);
   const W = WORLDS[w];
-  $("worldIndex").textContent = "World " + (w + 1) + " of " + WORLDS.length;
-  $("worldName").textContent = W.name;
+  $("vaultBar").innerHTML = vaultBarHTML();
+
+  // the path: the level you're on (big, green) with the next two above it
+  const path = $("lvPath");
+  path.innerHTML = "";
+  if (allDone()) {
+    path.innerHTML = '<div class="lv-node done">' + ICON.check + "</div>";
+  } else {
+    for (let k = 2; k >= 0; k--) {
+      const i = S.cleared + k;
+      if (i >= LEVELS.length) continue;
+      const lv = LEVELS[i];
+      const t = tierOf(lv);
+      const n = el("div", "lv-node" + (k === 0 ? " current" : " next") + (t ? " " + t : "") + (k === 2 ? " far" : ""));
+      n.innerHTML = "<b>" + (i + 1) + "</b>" + (t ? '<span class="lv-skull">' + ICON.skull + "</span>" : "") + (k > 0 ? '<span class="lv-lock">' + ICON.lock + "</span>" : "");
+      if (k === 0) n.addEventListener("click", () => startLevel());
+      path.appendChild(n);
+    }
+  }
+
+  // world strip: how far through this world's picture, with its chests along the way
   const k = clearedInWorld(w);
-  $("worldProg").textContent = k + "/" + worldCount[w];
-  $("pictureNote").textContent = worldDone(w) ? "Picture complete: " + W.picture : "Rebuilding: " + W.picture;
-  $("worldBar").style.width = (100 * k) / Math.max(1, worldCount[w]) + "%";
-  renderMosaic($("homeMosaic"), w, revealedFor(w, k));
+  const N = Math.max(1, worldCount[w]);
+  let marks = "";
+  for (let j = 3; j < N; j += 3) marks += '<i class="ws-chest' + (k >= j ? " got" : "") + '" style="left:' + (100 * j) / N + '%">' + ICON.chest + "<small>" + j + "</small></i>";
+  marks += '<i class="ws-chest pic' + (k >= N ? " got" : "") + '" style="left:100%">' + ICON.gift + "<small>" + N + "</small></i>";
+  $("worldStrip").innerHTML = '<span class="wst-name">' + W.name + '</span><span class="wst-bar"><i style="width:' + (100 * k) / N + '%"></i>' + marks + "</span>";
 
   const play = $("playBtn");
   if (allDone()) {
-    $("playLevel").textContent = "All worlds rebuilt!";
-    $("playSub").textContent = "More worlds are on the way";
+    $("playLevel").textContent = "All done!";
     play.disabled = true;
   } else {
-    const lv = LEVELS[S.cleared];
-    $("playLevel").textContent = "Play level " + (S.cleared + 1);
-    $("playSub").textContent = (lv.difficulty || "Easy") + " · " + W.name;
+    $("playLevel").textContent = "Level " + (S.cleared + 1);
     play.disabled = false;
+    play.classList.toggle("hard", !!tierOf(LEVELS[S.cleared]));
   }
 
-  $("chestIc").innerHTML = ICON.chest;
-  $("questIc").innerHTML = ICON.quest;
-  $("rushIc").innerHTML = ICON.rush;
-  const rb = $("rushBadge");
-  rb.hidden = S.bonus <= 0;
-  rb.textContent = S.bonus;
-  $("tileRush").classList.toggle("glow", S.bonus > 0);
-  const cb = $("chestBadge");
-  cb.hidden = S.chests <= 0;
-  cb.textContent = S.chests;
-  $("tileChest").classList.toggle("glow", S.chests > 0);
-  renderWsStrip($("wsStrip")); // the Workshop, right under the world's picture (workshop.js)
+  const Wk = S.workshop;
+  evButton($("evWorkshop"), ICON.workshop, bpComplete() ? "Build!" : Wk.boxes.length ? Wk.boxes.length + " to open" : "Workshop", Wk.boxes.length || (bpComplete() ? "!" : ""), Wk.boxes.length > 0 || bpComplete());
+  evButton($("evChest"), S.chests > 0 ? ICON.chestOpen : ICON.chest, S.chests > 0 ? "Open!" : "Chests", S.chests, S.chests > 0);
+  evButton($("evRush"), ICON.rush, "Rush", S.bonus, S.bonus > 0);
   const ready = questsReady();
-  [$("questBadge"), $("tabQuestBadge")].forEach((b) => {
-    b.hidden = ready <= 0;
-    b.textContent = ready;
-  });
+  evButton($("evQuests"), ICON.quest, untilMidnight(), ready, ready > 0);
+  evButton($("evVault"), ICON.vault, S.vault.n + "/" + VAULT_GOAL, "", false);
+  const day = ((Math.max(1, S.login.count) - 1) % 7) + 1;
+  evButton($("evLogin"), ICON.calendar(day), "Day " + day, "", false);
   renderTop();
 }
 $("playBtn").addEventListener("click", () => {
   if (!allDone()) startLevel();
 });
-$("tileChest").addEventListener("click", openChest);
-$("tileQuests").addEventListener("click", () => showPane("Quests"));
-$("tileRush").addEventListener("click", () => openRush());
-$("wsStrip").addEventListener("click", () => showPane("Workshop"));
+$("evChest").addEventListener("click", openChest);
+$("evQuests").addEventListener("click", () => showPane("Quests"));
+$("evRush").addEventListener("click", () => openRush());
+$("evWorkshop").addEventListener("click", () => showPane("Workshop"));
+$("evVault").addEventListener("click", () => openVault());
+$("vaultBar").addEventListener("click", () => openVault());
+$("evLogin").addEventListener("click", () => showPane("Quests"));
+$("worldStrip").addEventListener("click", () => showPane("Collection"));
+
+// ---------------------------------------------------------------- collection
+// Every world's brick picture is an album card; finishing a world's levels completes its picture.
+function renderCollection() {
+  const total = LEVELS.length;
+  const pics = WORLDS.filter((_, w) => worldDone(w)).length;
+  $("collHero").innerHTML =
+    '<div class="ch-art">' + ICON.tabBook + '</div><div class="ch-main"><b>Complete every picture</b><span>' + pics + " of " + WORLDS.length + ' pictures rebuilt</span><div class="cbar"><i style="width:' + (100 * Math.min(S.cleared, total)) / total + '%"></i><span>' + Math.min(S.cleared, total) + "/" + total + "</span></div></div>";
+  const grid = $("collGrid");
+  grid.innerHTML = "";
+  WORLDS.forEach((W, w) => {
+    if (!worldCount[w]) return;
+    const k = clearedInWorld(w);
+    const open = worldUnlocked(w);
+    const card = el("button", "coll-card" + (open ? "" : " locked") + (worldDone(w) ? " done" : ""));
+    card.dataset.world = W.id || "";
+    card.innerHTML =
+      '<span class="cc-pic"><span class="mosaic mini" id="cm' + w + '"></span>' + (open ? "" : '<span class="cc-lock">' + ICON.lock + "</span>") + '</span><span class="cc-name">' + W.name + "</span>" +
+      (worldDone(w) ? '<span class="cc-done">' + ICON.check + "</span>" : '<span class="cc-prog"><span class="cbar"><i style="width:' + (100 * k) / worldCount[w] + '%"></i><span>' + k + "/" + worldCount[w] + '</span></span><i class="coin"></i></span>');
+    grid.appendChild(card);
+    renderMosaic($("cm" + w), w, open ? revealedFor(w, k) : 0);
+    card.addEventListener("click", () => {
+      if (!open) return toast("Finish " + WORLDS[w - 1].name + " to unlock this picture");
+      openSheet(
+        '<div class="ribbon">' + W.name + '</div><div class="sheet-body"><div class="mosaic big" id="collBig"></div><h3>' + W.picture + "</h3><p>" + k + " of " + worldCount[w] + " levels · " + (worldDone(w) ? "complete!" : "every level adds bricks") + '</p><button class="btn-big green" id="collOk">Nice!</button></div>',
+        { cls: "dismissable" },
+      );
+      renderMosaic($("collBig"), w, revealedFor(w, k));
+      $("collOk").addEventListener("click", closeSheet);
+    });
+  });
+}
+
+// ---------------------------------------------------------------- vault run
+// Win levels in a row without failing. Running out of time or a bomb going off (and then
+// retrying or leaving), restarting or leaving mid-level breaks the run. 10 cracks the vault.
+const VAULT_GOAL = 10;
+const VAULT_PRIZES = {
+  3: { coins: 25, text: "25 coins" },
+  6: { inv: { hourglass: 1, rocket: 1 }, text: "Hourglass + Rocket" },
+  10: { coins: 150, boxes: 2, inv: { rocket: 1, hammer: 1 }, text: "150 coins, 2 gold mystery blocks, Rocket and Hammer" },
+};
+function vaultBarHTML() {
+  const n = S.vault.n;
+  return '<span class="vb-ic">' + ICON.block + '</span><span class="vb-bar"><i style="width:' + (100 * n) / VAULT_GOAL + '%"></i><b>' + n + "/" + VAULT_GOAL + '</b></span><span class="vb-prize">' + ICON.vault + "</span>";
+}
+function vaultWin() {
+  const V = S.vault;
+  V.n++;
+  const prize = VAULT_PRIZES[V.n];
+  if (prize) {
+    if (prize.coins) (S.coins += prize.coins), (S.stats.coinsEarned += prize.coins);
+    if (prize.boxes) for (let i = 0; i < prize.boxes; i++) S.workshop.boxes.push("gold");
+    if (prize.inv) for (const [k, v] of Object.entries(prize.inv)) S.inv[k] = (S.inv[k] || 0) + v;
+  }
+  const n = V.n;
+  if (V.n >= VAULT_GOAL) (V.n = 0), V.round++;
+  save();
+  return { n, prize };
+}
+function breakStreak() {
+  if (S.vault.n > 0) toast("Vault Run streak lost");
+  S.vault.n = 0;
+  save();
+}
+const inLevel = () => !levelOver && moves > 0;
+function openVault() {
+  const n = S.vault.n;
+  const steps = Object.keys(VAULT_PRIZES).map(Number);
+  openSheet(
+    '<div class="vault-sheet"><button class="x-btn" id="vaultX" aria-label="Close">✕</button><h2 class="heist-title">Vault<br>Run</h2><div class="vault-art">' + ICON.vault + '</div>' +
+      '<div class="vault-prog"><span class="vb-ic">' + ICON.block + '</span><span class="vb-bar"><i style="width:' + (100 * n) / VAULT_GOAL + '%"></i><b>' + n + "/" + VAULT_GOAL + "</b>" +
+      steps.map((k) => '<em class="vp-step' + (n >= k ? " got" : "") + '" style="left:' + (100 * k) / VAULT_GOAL + '%">' + k + "</em>").join("") + "</span></div>" +
+      '<div class="grand"><small>Grand prize!</small><b>' + VAULT_PRIZES[10].text + '</b></div><p class="vault-text">Beat levels in a row without failing to crack the vault! Prizes at 3 and 6 too.</p>' +
+      (allDone() ? "" : '<button class="btn-big green" id="vaultPlay">Play</button>') + "</div>",
+    { cls: "dismissable heist" },
+  );
+  $("vaultX").addEventListener("click", closeSheet);
+  if ($("vaultPlay"))
+    $("vaultPlay").addEventListener("click", () => {
+      closeSheet();
+      startLevel();
+    });
+}
 
 // ---------------------------------------------------------------- map
 let mapWorld = 0;
@@ -562,7 +717,7 @@ function renderQuests() {
     d.innerHTML = "<span>Day " + (i + 1) + "</span>" + (i === 6 ? ICON.chest : '<i class="coin"></i><b>' + LOGIN_REWARDS[i] + "</b>");
     days.appendChild(d);
   }
-  $("questReset").textContent = "New quests tomorrow. Clear levels to make progress.";
+  $("questReset").innerHTML = '<i class="tp-clock"></i>' + untilMidnight();
 }
 
 // ---------------------------------------------------------------- login streak
@@ -668,7 +823,7 @@ function openChest() {
 const powerGlyph = (t) => '<i class="pw pw-' + t + '">' + ICON[t] + "</i>";
 
 // ---------------------------------------------------------------- shop
-const SHOP = ["undo", "hammer", "freeze", "vacuum"].map((id) => ({ id, name: POWER_NAME[id], desc: POWER_TEXT[id], icon: id }));
+const SHOP = ["hourglass", "rocket", "undo", "hammer", "freeze", "vacuum"].map((id) => ({ id, name: POWER_NAME[id], desc: POWER_TEXT[id], icon: id }));
 function applySkin() {
   document.body.classList.toggle("skin-real", S.skin === "real");
 }
@@ -786,10 +941,93 @@ let freezeUntil = 0;
 let lastTick = 0;
 let tickHandle = 0;
 
+// before every level: the level card, where you can pick the Hourglass and the Rocket
+const PRE = ["hourglass", "rocket"];
+let preSel = {};
 function startLevel() {
-  $("hub").hidden = true;
-  $("game").hidden = false;
-  loadLevel(S.cleared);
+  if (allDone()) return showHub("Home");
+  const idx = S.cleared;
+  const L = LEVELS[idx];
+  const t = tierOf(L);
+  const tile = (id) =>
+    '<button class="pre-tile' + (preSel[id] && S.inv[id] > 0 ? " on" : "") + '" data-id="' + id + '">' + ICON[id] + '<em class="pre-n">' + (S.inv[id] > 0 ? S.inv[id] : "+") + '</em><i class="pre-check">' + ICON.check + "</i></button>";
+  openSheet(
+    '<button class="x-btn" id="preX" aria-label="Close">✕</button><div class="ribbon">Level ' + (idx + 1) + "</div>" +
+      (S.vault.n > 0 ? '<div class="streak-sign"><small>Streak</small><b>' + S.vault.n + "</b></div>" : "") +
+      '<div class="sheet-body pre"><div class="pre-info' + (t ? " " + t : "") + '">' + (t ? '<span class="pre-skull">' + ICON.skull + "</span>" : '<span class="pre-skull">' + ICON.block + "</span>") +
+      "<div><b>" + (t ? L.difficulty + " level" : WORLDS[L.world].name) + "</b><span>" + (t ? "Take your time and plan ahead" : (L.difficulty || "Easy") + " · " + (L.rows || 6) + "×" + (L.cols || 6) + " board") + "</span></div></div>" +
+      '<h4 class="pre-h">Select boosters:</h4><div class="pre-row">' + PRE.map(tile).join("") + '</div><p class="pre-hint" id="preHint">Hourglass: +30 seconds. Rocket: knocks a block out at the start.</p>' +
+      '<button class="btn-big green" id="preGo">Play</button></div>',
+    { cls: "dismissable pre-sheet" },
+  );
+  $("preX").addEventListener("click", closeSheet);
+  $("sheet").querySelectorAll(".pre-tile").forEach((b) =>
+    b.addEventListener("click", () => {
+      const id = b.dataset.id;
+      if (S.inv[id] <= 0) {
+        if (S.coins < COST[id]) return Sfx.error(), toast("Not enough coins for a " + POWER_NAME[id]);
+        S.coins -= COST[id];
+        S.inv[id]++;
+        save();
+        renderTop();
+        toast(powerGlyph(id) + " Bought a " + POWER_NAME[id] + " for " + COST[id]);
+        b.querySelector(".pre-n").textContent = S.inv[id];
+      }
+      preSel[id] = !preSel[id];
+      b.classList.toggle("on", preSel[id]);
+      Sfx.pop();
+    }),
+  );
+  $("preGo").addEventListener("click", () => {
+    closeSheet();
+    const use = PRE.filter((id) => preSel[id] && S.inv[id] > 0);
+    $("hub").hidden = true;
+    $("game").hidden = false;
+    loadLevel(idx);
+    use.forEach((id) => S.inv[id]--);
+    if (use.length) (usedPower = true), save(), renderTop();
+    if (use.includes("hourglass")) {
+      timeMax = timeLeft += 30;
+      renderTimer();
+      toast(ICON.hourglass.replace("<svg", '<svg class="t-ic"') + " +30 seconds");
+    }
+    if (use.includes("rocket")) setTimeout(launchRocket, 450);
+  });
+}
+// the Rocket: flies up from the bottom and knocks out one block before you start
+function launchRocket() {
+  const pick = blocks.filter((b) => isNeeded(b) && !b.removed && !b.ice && b.lockBy == null && !b.bomb);
+  const pool = pick.length ? pick : blocks.filter((b) => isNeeded(b) && !b.removed);
+  if (!pool.length) return;
+  const b = pool[Math.floor(Math.random() * pool.length)];
+  const e = b.el;
+  const x = parseFloat(e.style.left) + parseFloat(e.style.width) / 2;
+  const y = parseFloat(e.style.top) + parseFloat(e.style.height) / 2;
+  const r = el("div", "fx fx-rocket", ICON.rocket);
+  boardEl.appendChild(r);
+  const fromY = boardEl.offsetHeight + 120;
+  const fromX = boardEl.offsetWidth / 2;
+  const ang = (Math.atan2(x - fromX, -(y - fromY)) * 180) / Math.PI;
+  Sfx.whoosh();
+  fxBusy++;
+  r.animate(
+    [
+      { transform: "translate(" + (fromX - 22) + "px," + (fromY - 22) + "px) rotate(" + ang + "deg) scale(1.2)" },
+      { transform: "translate(" + (x - 22) + "px," + (y - 22) + "px) rotate(" + ang + "deg) scale(1)" },
+    ],
+    { duration: 520, easing: "cubic-bezier(.5,0,.9,.6)", fill: "forwards" },
+  ).onfinish = () => {
+    r.remove();
+    Sfx.boom();
+    boardEl.animate([{ transform: "none" }, { transform: "translateY(5px)" }, { transform: "none" }], { duration: 240, easing: "ease-out" });
+    burst(PADDING + x, PADDING + y, "#ffb020", 22);
+    popBlock(b);
+    fxBusy--;
+    refreshIce();
+    resetHistory();
+    updateBoosters();
+    checkWin();
+  };
 }
 
 function loadLevel(idx) {
@@ -822,8 +1060,9 @@ function loadLevel(idx) {
   exits.forEach(renderExit);
   renderBoardFeatures();
   resetHistory();
-  $("levelTitle").textContent = "Level " + (idx + 1);
-  $("levelWorld").textContent = WORLDS[L.world].name + " · " + (L.difficulty || "Easy");
+  fitBoard();
+  $("levelTitle").textContent = idx + 1;
+  $("game").classList.toggle("hard", !!tierOf(L));
   cancelAnimationFrame(tickHandle);
   timeMax = timeLeft = L.time || 60;
   timerStarted = false;
@@ -834,13 +1073,52 @@ function loadLevel(idx) {
   renderTop();
   showTip(idx);
 }
+// restarting or leaving a level you've started breaks the Vault Run streak, so ask first
+function confirmLeave(what, go) {
+  if (!inLevel() || S.vault.n <= 0) return go();
+  openSheet(
+    '<div class="ribbon red">' + what + '?</div><div class="sheet-body small"><div class="vault-mini">' + ICON.vault + "</div><h3>Lose your streak?</h3><p>You've won " + S.vault.n + " in a row. " + what + " now and the Vault Run starts again from 0.</p>" +
+      '<div class="btn-row"><button class="btn-big green" id="leaveNo">Keep playing</button><button class="btn-link" id="leaveYes">' + what + " anyway</button></div></div>",
+    { cls: "dismissable" },
+  );
+  $("leaveNo").addEventListener("click", closeSheet);
+  $("leaveYes").addEventListener("click", () => {
+    closeSheet();
+    breakStreak();
+    go();
+  });
+}
 $("resetBtn").addEventListener("click", () => {
-  if (!levelOver) loadLevel(curIdx);
+  if (levelOver) return;
+  confirmLeave("Restart", () => {
+    if (inLevel()) breakStreak();
+    loadLevel(curIdx);
+  });
 });
-$("homeBtn").addEventListener("click", () => {
+function leaveLevel() {
+  if (inLevel()) breakStreak();
   levelOver = true;
   cancelAnimationFrame(tickHandle);
   showHub("Home");
+}
+$("pauseBtn").addEventListener("click", () => {
+  if (levelOver) return;
+  openSheet(
+    '<div class="ribbon">Paused</div><div class="sheet-body small"><div class="set-list"><button class="set-row" id="pSound"><span>Sound</span><i class="toggle' + (S.muted ? "" : " on") + '"></i></button></div>' +
+      '<button class="btn-big green" id="pResume">Resume</button><button class="btn-big blue" id="pHome">Home</button></div>',
+    { cls: "dismissable" },
+  );
+  $("pSound").addEventListener("click", () => {
+    S.muted = !S.muted;
+    Sfx.setMuted(S.muted);
+    save();
+    $("pSound").querySelector(".toggle").classList.toggle("on", !S.muted);
+  });
+  $("pResume").addEventListener("click", closeSheet);
+  $("pHome").addEventListener("click", () => {
+    closeSheet();
+    confirmLeave("Leave", leaveLevel);
+  });
 });
 
 // ---- the clock: starts on your first touch, pauses while a pop-up is open
@@ -848,7 +1126,7 @@ const fmt = (s) => Math.floor(s / 60) + ":" + String(Math.ceil(s) % 60 === 0 && 
 function renderTimer(frozen = false) {
   const t = $("timer");
   const s = Math.ceil(timeLeft);
-  $("timerText").textContent = Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  $("timerText").textContent = pad(Math.floor(s / 60)) + ":" + pad(s % 60);
   $("timerBar").style.transform = "scaleX(" + Math.max(0, timeLeft / timeMax) + ")";
   t.classList.toggle("low", timerStarted && timeLeft <= 10);
   t.classList.toggle("frozen", frozen);
@@ -905,6 +1183,7 @@ function timeUp() {
   );
   $("failRetry").addEventListener("click", () => {
     closeSheet();
+    breakStreak();
     loadLevel(curIdx);
   });
   $("failMore").addEventListener("click", () => {
@@ -924,6 +1203,7 @@ function timeUp() {
   });
   $("failHome").addEventListener("click", () => {
     closeSheet();
+    breakStreak();
     showHub("Home");
   });
 }
@@ -948,10 +1228,12 @@ hooks.boom = (b) => {
     );
     $("failRetry").addEventListener("click", () => {
       closeSheet();
+      breakStreak();
       loadLevel(curIdx);
     });
     $("failHome").addEventListener("click", () => {
       closeSheet();
+      breakStreak();
       showHub("Home");
     });
   }, 900);
@@ -983,13 +1265,17 @@ hooks.crateBreak = (b) => {
 function buildGoal() {
   const par = LEVELS[curIdx].par || blocks.length;
   const mk = (t, label) => '<span class="gs" data-t="' + t + '">★<small>' + label + "</small></span>";
-  $("goalStars").innerHTML = mk(999, "any") + mk(par + 2, "≤" + (par + 2)) + mk(par, "≤" + par);
+  const cut = starCut(par);
+  $("goalStars").innerHTML = mk(999, "any") + mk(cut.two, "≤" + cut.two) + mk(cut.three, "≤" + cut.three);
 }
 function updateHUD() {
   $("moveCount").textContent = moves;
   [...$("goalStars").children].forEach((s) => s.classList.toggle("lost", moves > +s.dataset.t));
 }
-const starsFor = (m, par) => (m <= par ? 3 : m <= par + 2 ? 2 : 1);
+// Stars leave room for working it out: par is what someone who already knows the answer
+// needs, so 3 stars allow half as many moves again (+1), and 2 stars twice as many (+3).
+const starCut = (par) => ({ three: Math.ceil(par * 1.5) + 1, two: par * 2 + 3 });
+const starsFor = (m, par) => (m <= starCut(par).three ? 3 : m <= starCut(par).two ? 2 : 1);
 
 // one-time hints the first time something new shows up
 const TIPS = {
@@ -1431,6 +1717,7 @@ function checkWin() {
   S.workshop.boxes.push(box);
   if (worldComplete) S.workshop.boxes.push("gold", "gold");
 
+  const vault = vaultWin();
   questEvent("clear", 1);
   questEvent("stars", stars);
   if (!usedPower) questEvent("nopower", 1);
@@ -1440,47 +1727,62 @@ function checkWin() {
   setTimeout(
     () =>
       showWin({
-        idx, w, stars, base, starBonus, tier, comboBonus, timeBonus, worldBonus, total, chest, ticket, worldComplete, before, after, box,
+        idx, w, stars, base, starBonus, tier, comboBonus, timeBonus, worldBonus, total, chest, ticket, worldComplete, before, after, box, vault,
         difficulty: L.difficulty || "Easy",
       }),
     700,
   );
 }
 
+// a pile of coins for the win screen
+function coinPile() {
+  const spots = [[0, 0], [-30, 4], [30, 4], [-58, 14], [58, 14], [-16, -18], [16, -18], [0, -36], [-40, -10], [40, -10], [-22, 22], [22, 22], [0, 26]];
+  return (
+    '<svg viewBox="-100 -80 200 130" class="pile"><defs><radialGradient id="cpg" cx="35%" cy="30%"><stop offset="0" stop-color="#fff6b0"/><stop offset=".55" stop-color="#ffc83a"/><stop offset="1" stop-color="#e58f10"/></radialGradient></defs>' +
+    spots
+      .sort((a, b) => a[1] - b[1])
+      .map(([x, y], i) => {
+        const tilt = ((i * 37) % 30) - 15;
+        return '<g transform="translate(' + x + " " + y + ") rotate(" + tilt + ')"><ellipse cy="5" rx="24" ry="12" fill="#b86a08"/><ellipse rx="24" ry="12" fill="url(#cpg)" stroke="#c97a0a" stroke-width="1.5"/><ellipse rx="15" ry="7" fill="none" stroke="#e8a020" stroke-width="2"/></g>';
+      })
+      .join("") +
+    "</svg>"
+  );
+}
 function showWin(r) {
   Sfx.win();
-  const rows = [
-    ["Level cleared", r.base],
-    ["Stars (" + r.stars + ")", r.starBonus],
-  ];
-  if (r.tier) rows.push([r.difficulty + " bonus", r.tier]);
-  if (r.timeBonus) rows.push(["Time left", r.timeBonus]);
-  if (r.comboBonus) rows.push(["Best combo x" + bestCombo, r.comboBonus]);
-  if (r.worldBonus) rows.push(["Picture complete!", r.worldBonus]);
-  const starsHtml = [0, 1, 2].map((i) => '<span class="star' + (i < r.stars ? " on" : "") + '" style="animation-delay:' + (0.25 + i * 0.2) + 's">' + ICON.star + "</span>").join("");
-  const rowsHtml = rows.map(([t, v], i) => '<div class="rw" style="animation-delay:' + (0.9 + i * 0.12) + 's"><span>' + t + "</span><b>+" + v + ' <i class="coin"></i></b></div>').join("");
-  const nextLabel = r.worldComplete ? "See your picture" : allDone() ? "Finish" : "Next level";
-  const pct = Math.round((100 * r.after) / worldCount[r.w]);
+  const starsHtml = [0, 1, 2].map((i) => '<span class="star' + (i < r.stars ? " on" : "") + '" style="animation-delay:' + (0.35 + i * 0.2) + 's">' + ICON.star + "</span>").join("");
+  const extras = [];
+  if (r.chest) extras.push(ICON.chest + "<span>Chest</span>");
+  if (r.ticket) extras.push(ICON.rush + "<span>Rush ticket</span>");
+  if (r.worldBonus) extras.push(ICON.gift + "<span>Picture done!</span>");
+  if (r.vault.prize) extras.push(ICON.vault + "<span>" + r.vault.prize.text + "</span>");
+  const nextLabel = r.worldComplete ? "See your picture" : allDone() ? "Finish" : "Continue";
+  const steps = Object.keys(VAULT_PRIZES).map(Number);
   openSheet(
-    '<div class="ribbon">Level ' + (r.idx + 1) + '</div><div class="sheet-body win"><div class="stars">' + starsHtml + '</div><div class="rewards">' + rowsHtml +
-      '<div class="rw total" style="animation-delay:' + (1.0 + rows.length * 0.12) + 's"><span>Total</span><b><em id="winTotal">+0</em><i class="coin"></i></b></div></div>' +
-      '<div class="win-pic"><div class="mosaic mini" id="winMosaic"></div><div class="win-pic-t"><b>' + WORLDS[r.w].picture + "</b><span>" + pct + '% rebuilt</span></div></div>' +
-      (r.chest ? '<div class="note chest">' + ICON.chest + "<span>You earned a chest!</span></div>" : "") +
-      (r.ticket ? '<div class="note chest">' + ICON.rush + "<span>Bonus Rush ticket!</span></div>" : "") +
-      '<button class="note chest ws-open" id="winOpen">' + ICON.workshop + "<span>" + (r.box === "gold" ? "Gold mystery block!" : "Mystery block!") + "</span><em>Open it now</em></button>" +
-      '<div class="win-actions"><button class="btn-big green" id="winNext">' + nextLabel + '</button><button class="btn-link" id="winHome">Back to home</button></div></div>',
+    '<div class="win-full"><h2 class="lc-title"><span>Level</span><span>Complete</span></h2><div class="stars">' + starsHtml + "</div>" +
+      '<div class="lc-pile"><i class="rays"></i>' + coinPile() + '<b class="lc-amt"><em id="winTotal">+0</em><i class="coin"></i></b></div>' +
+      '<div class="lc-chips"><button class="lc-chip ws" id="winOpen">' + ICON.workshop + "<span>" + (r.box === "gold" ? "Gold block" : "Mystery block") + "</span></button>" +
+      extras.map((x) => '<div class="lc-chip">' + x + "</div>").join("") + "</div>" +
+      '<div class="lc-actions"><button class="btn-big green" id="winNext">' + nextLabel + '</button><button class="btn-link" id="winHome">Home</button></div>' +
+      '<div class="lc-vault"><span class="lcv-name">Vault<br>Run</span><span class="vb-bar"><i style="width:' + (100 * ((r.vault.n - 1) % VAULT_GOAL)) / VAULT_GOAL + '%" id="lcvFill"></i><b>' + r.vault.n + "/" + VAULT_GOAL + "</b>" +
+      steps.map((k) => '<em class="vp-step' + (r.vault.n >= k ? " got" : "") + '" style="left:' + (100 * k) / VAULT_GOAL + '%">' + k + "</em>").join("") + '</span><span class="vb-prize">' + ICON.vault + "</span></div></div>",
+    { cls: "win-sheet", over: "win-over" },
   );
-  [0, 1, 2].forEach((i) => i < r.stars && setTimeout(() => Sfx.star(i), 250 + i * 200 + 150));
-  setTimeout(() => countUp($("winTotal"), r.total, "+"), 900);
-  setTimeout(() => Sfx.coin(), 950);
-  renderMosaic($("winMosaic"), r.w, revealedFor(r.w, r.after), revealedFor(r.w, r.before));
+  [0, 1, 2].forEach((i) => i < r.stars && setTimeout(() => Sfx.star(i), 350 + i * 200 + 150));
+  setTimeout(() => countUp($("winTotal"), r.total, "+"), 700);
+  setTimeout(() => Sfx.coin(), 750);
+  setTimeout(() => {
+    const f = $("lcvFill");
+    if (f) f.style.width = (100 * r.vault.n) / VAULT_GOAL + "%";
+  }, 900);
   renderTop();
   checkTrophies();
   $("winNext").addEventListener("click", () => {
     if (r.worldComplete) return showWorldComplete(r.w);
     closeSheet();
     if (allDone()) showHub("Home");
-    else loadLevel(S.cleared);
+    else startLevel();
   });
   $("winHome").addEventListener("click", () => {
     closeSheet();
@@ -1660,6 +1962,20 @@ function openRush() {
 // ---------------------------------------------------------------- iPhone home-screen app: short page area
 // some iOS versions give the page less height than the screen in standalone mode. the strip below is painted with the
 // theme colour (see setTheme) and the tab bar drops its extra bottom padding so it sits near the bottom edge.
+// Big grids (8 wide) don't fit a phone at full size: scale the board down to the space it has.
+// The board keeps its own size in pixels; only #boardScale is scaled, and #boardFit takes the
+// scaled size so it stays centred. Dragging and aiming divide finger distances by the scale.
+function fitBoard() {
+  const wrap = document.querySelector(".board-wrap");
+  if (!wrap || $("game").hidden) return;
+  const fit = $("boardFit"), sc = $("boardScale");
+  const w = boardEl.offsetWidth, h = boardEl.offsetHeight;
+  if (!w || !h) return;
+  const k = Math.min(1, (wrap.clientWidth - 16) / w, (wrap.clientHeight - 12) / h);
+  sc.style.transform = k < 1 ? "scale(" + k.toFixed(4) + ")" : "";
+  fit.style.width = w * k + "px";
+  fit.style.height = h * k + "px";
+}
 function fixViewport() {
   const standalone = navigator.standalone === true || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
   const portrait = window.matchMedia && matchMedia("(orientation: portrait)").matches;
@@ -1668,6 +1984,7 @@ function fixViewport() {
   document.documentElement.classList.toggle("vp-short", short);
 }
 ["resize", "orientationchange", "pageshow", "focus"].forEach((ev) => window.addEventListener(ev, () => setTimeout(fixViewport, 50)));
+window.addEventListener("resize", () => setTimeout(fitBoard, 60));
 if (window.visualViewport) visualViewport.addEventListener("resize", () => setTimeout(fixViewport, 50));
 fixViewport();
 setTimeout(fixViewport, 400);
