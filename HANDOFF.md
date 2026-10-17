@@ -3,7 +3,7 @@
 Audience: an LLM coding agent (Claude Code) taking over development.
 Repo: `github.com/tiffanivick/color-jam` (branch `main`), deployed by GitHub Pages at
 `https://tiffanivick.github.io/color-jam/`. Owner plays it as an iPhone home-screen web app.
-Current live build: **50** (`?v=50`).
+Current live build: **54** (`?v=54`).
 
 ---
 
@@ -43,14 +43,21 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
 
 | File | Responsibility |
 |---|---|
-| `index.html` | Markup and script order: `sound.js, worlds.js, brick.js, block3d.js, engine.js, fx.js, workshop.js, app.js`, all `?v=N` |
+| `index.html` | Markup and script order: `sound.js, worlds.js, brick.js, block3d.js, engine.js, fx.js, icons.js, workshop.js, app.js, meta.js, home.js, play.js, win.js, rush.js, main.js`, all `?v=N` |
 | `src/engine.js` | Board, blocks, drag physics, movement rules, gates/exits, themed mechanics, bombs |
 | `src/brick.js` | SVG "realistic" block: rounded outline across cells, gradients, studs, rim, and the overlays (ice, chains, stripes, arrows, snow) |
 | `src/block3d.js` | Since build 39: the realistic block **body** as a real 3D render (WebGL2 ray-marcher, glossy plastic, studs, contact shadow), cached per shape + colour + look as a PNG data URL. `renderBlock()` puts it under the SVG (`img.block-3d`, wrapper class `.b3d`) and CSS hides the SVG's own body. Since build 47 **every** block kind gets it (same height everywhere): crates (`look` 2, wood), sand pillars (3), rainbow (1); comets, crates, pillars and axis blocks have no 3D studs (their SVG signs show instead). Since build 48 the shadow is a tight contact shadow kept inside the 6px gap (`PAD` 8): a wider one spilled onto neighbours and made blocks look bigger. No WebGL → SVG body as before. Preview: `tools/r3d/blocks.html`. |
 | `src/fx.js` | **Power-up visuals and aiming**: hammer, vacuum, freeze, tool aiming/tracking |
 | `src/solver.js` | Since build 45: in-game solver, run as a Web Worker after every settled change (`queueStuckCheck()` from `updateBoosters()`). Searches every option (no greedy exits), bombs ignored, crates smashable, cap 150k states → `null` (unknown). If the board can't be won, a card offers a free **rewind** to the newest snapshot (`boardHistory`) that can still win; `restoreSnapshot()` re-renders blocks that had left. Also runs in node: `require('./src/solver.js').solvable(board)`. |
 | `src/workshop.js` | Since build 40: the **Workshop** (see §2.5): mystery blocks, blueprints, and the gadgets Magnet, Ghost, Saw, Rainbow Brush. Loaded before `app.js`, so its top-level code must not touch `app.js` names. |
-| `src/app.js` | Game state and save, level flow, timer, boosters, win/lose, shop, quests, trophies, UI sheets |
+| `src/icons.js` | Since build 54: `ICON`, every inline SVG the menus use |
+| `src/app.js` | Since build 54 only the **core**: save data (`S`, `load`, `save`), dates, levels and worlds, theme, brick pictures (mosaics), toasts and sheets (`openSheet`), top bar, settings, tabs (`showPane`) |
+| `src/meta.js` | Daily quests, login streak, economy note, chests, shop, trophies |
+| `src/home.js` | Home screen, Collection, Vault Run, Map |
+| `src/play.js` | A level in progress: level card and pre-level boosters, `loadLevel`, clock, losing, star goals, tips, combos, power-ups, never-stuck rewind |
+| `src/win.js` | `checkWin`, Level Complete, finished pictures |
+| `src/rush.js` | Bonus Rush |
+| `src/main.js` | Starts the game (`init`), iPhone viewport fixes, diagnostics. **Must be the last script.** |
 | `src/sound.js` | WebAudio synth SFX (`Sfx.smash(n)`, `Sfx.suck()`, `Sfx.freeze()`, `Sfx.pop()`, …) |
 | `src/worlds.js` | World themes: colours, backgrounds, and which mechanics each world introduces |
 | `style.css` | All styling; `.skin-real` = realistic blocks; `.fx-*` = power-up effects |
@@ -174,6 +181,12 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
   while a gadget is picked the button shows it and tapping it puts it away.
 - Home: the Workshop is a strip at the foot of the world card (`renderWsStrip()`); the win sheet's
   mystery-block note is an "Open it now" button to the Workshop.
+
+### 2.8 Script files (build 54)
+`app.js` was split by screen with no behaviour change. They are plain scripts sharing globals, so
+**load order matters**: code that runs while a file loads (not inside a function) may only use names
+from files above it. `applySkin()` runs at load, so it lives in `app.js`; `init()` is in `main.js` so it
+starts only after every file has loaded.
 
 ### 2.7 Color Block Jam layout (build 50)
 The owner sent Color Block Jam screenshots as the target look. Everything in `style.css` under
