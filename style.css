@@ -1768,6 +1768,11 @@ html.vp-short .tab { padding-bottom: 0; }
    still paint the page itself. */
 html, body { background-color: #3d80ea; }
 html:has(#game:not([hidden])), body:has(#game:not([hidden])) { background-color: #e3eafa; }
-.tabbar { padding-bottom: max(4px, var(--safe-b)); }
-html.vp-short .tabbar { padding-top: 0; padding-bottom: 4px; }
+/* build 53: the page, the body and both screens fill the whole device screen (the large viewport,
+   which is the full screen height on iPhone), and the tab bar's background runs to the bottom edge
+   while its padding keeps the buttons above the home indicator. */
+html, body { height: 100%; min-height: 100vh; min-height: 100lvh; }
+body { bottom: auto; height: 100vh; height: 100lvh; }
+.screen { height: 100%; min-height: 100%; }
+.tabbar, html.vp-short .tabbar { padding-top: 0; padding-bottom: env(safe-area-inset-bottom, 20px); }
 .tab.on { height: auto; min-height: 78px; }
