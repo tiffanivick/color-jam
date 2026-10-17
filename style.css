@@ -1760,3 +1760,14 @@ html.vp-short .tab { padding-bottom: 0; }
 .vault-prog .vb-bar { margin-right: 4px; }
 .lv-path { overflow: hidden; padding-top: 30px; }
 @media (max-height: 740px) { .lv-node.far { display: none; } .ev-col { gap: 10px; } .lv-path { gap: 26px; } }
+
+/* build 51: the tab bar reaches the bottom of the screen. On iPhone home-screen apps the page can be
+   shorter than the screen (vp-short); the body is stretched by the measured gap (--gap-b) so nothing
+   of the background shows below the bar, and the bar keeps room for the home indicator. */
+html { background: #3d80ea; }
+html:has(#game:not([hidden])) { background: #e3eafa; }
+html.vp-short { --safe-b: max(16px, env(safe-area-inset-bottom)); }
+html.vp-short body { bottom: calc(-1 * var(--gap-b, 0px)); }
+.tabbar { padding-bottom: max(6px, var(--safe-b)); }
+.tab.on { height: auto; min-height: 78px; }
+html.vp-short .tabbar { padding-top: 0; padding-bottom: var(--safe-b); }
