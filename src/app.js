@@ -1980,9 +1980,7 @@ function fixViewport() {
   const full = Math.max(screen.height || 0, screen.width || 0);
   const short = !!(standalone && portrait && full && window.innerHeight < full - 2);
   document.documentElement.classList.toggle("vp-short", short);
-  // build 51: stretch the app over the strip iOS leaves below the page, so the tab bar sits at
-  // the very bottom of the screen (with room for the home indicator) on every phone length
-  document.documentElement.style.setProperty("--gap-b", (short ? Math.max(0, full - window.innerHeight) : 0) + "px");
+
 }
 ["resize", "orientationchange", "pageshow", "focus"].forEach((ev) => window.addEventListener(ev, () => setTimeout(fixViewport, 50)));
 window.addEventListener("resize", () => setTimeout(fitBoard, 60));

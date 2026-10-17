@@ -1761,13 +1761,13 @@ html.vp-short .tab { padding-bottom: 0; }
 .lv-path { overflow: hidden; padding-top: 30px; }
 @media (max-height: 740px) { .lv-node.far { display: none; } .ev-col { gap: 10px; } .lv-path { gap: 26px; } }
 
-/* build 51: the tab bar reaches the bottom of the screen. On iPhone home-screen apps the page can be
-   shorter than the screen (vp-short); the body is stretched by the measured gap (--gap-b) so nothing
-   of the background shows below the bar, and the bar keeps room for the home indicator. */
-html { background: #3d80ea; }
-html:has(#game:not([hidden])) { background: #e3eafa; }
-html.vp-short { --safe-b: max(16px, env(safe-area-inset-bottom)); }
-html.vp-short body { bottom: calc(-1 * var(--gap-b, 0px)); }
-.tabbar { padding-bottom: max(6px, var(--safe-b)); }
+/* build 52: iPhone home-screen apps can get a page shorter than the screen (vp-short: 812 of 874 on
+   a 402-wide iPhone). Nothing can be drawn below the page; iOS fills that strip with the body's
+   background colour. So the body's colour is the tab bar's bottom blue (the light play colour during a
+   level) and the strip reads as part of the bar, on every phone length. The gradient and pattern
+   still paint the page itself. */
+html, body { background-color: #3d80ea; }
+html:has(#game:not([hidden])), body:has(#game:not([hidden])) { background-color: #e3eafa; }
+.tabbar { padding-bottom: max(4px, var(--safe-b)); }
+html.vp-short .tabbar { padding-top: 0; padding-bottom: 4px; }
 .tab.on { height: auto; min-height: 78px; }
-html.vp-short .tabbar { padding-top: 0; padding-bottom: var(--safe-b); }

@@ -1,0 +1,33 @@
+<!doctype html>
+<!-- What the iPhone home-screen app looks like when iOS gives the page less height than the
+     screen (402 x 874 phone, 812 pt page): the app in the page area, the leftover strip below it
+     painted in the page's background colour, as iOS does. ?h=812&H=874&w=402&q=<app query> -->
+<html><head><meta charset="utf-8"><style>
+  html, body { margin: 0; background: #222; }
+  .phone { position: relative; overflow: hidden; border-radius: 48px; box-shadow: 0 0 0 10px #111; margin: 20px; }
+  iframe { display: block; border: 0; }
+  .strip { position: absolute; left: 0; right: 0; bottom: 0; }
+  .island { position: absolute; top: 11px; left: 50%; width: 124px; height: 36px; margin-left: -62px; border-radius: 20px; background: #000; z-index: 2; }
+  .sbar { position: absolute; top: 16px; left: 44px; right: 40px; display: flex; justify-content: space-between; z-index: 2; font: 600 17px -apple-system, system-ui, sans-serif; color: #fff; pointer-events: none; }
+  .homebar { position: absolute; bottom: 8px; left: 50%; width: 140px; height: 5px; margin-left: -70px; border-radius: 3px; background: rgba(0,0,0,0.75); z-index: 2; }
+</style></head><body>
+<div class="phone" id="phone"><div class="island"></div><div class="sbar"><b>8:53</b><span>●●● 88%</span></div><iframe id="app"></iframe><div class="strip" id="strip"></div><div class="homebar"></div></div>
+<script>
+  const p = new URLSearchParams(location.search);
+  const w = +p.get("w") || 402, h = +p.get("h") || 812, H = +p.get("H") || 874;
+  const phone = document.getElementById("phone"), app = document.getElementById("app"), strip = document.getElementById("strip");
+  phone.style.width = w + "px"; phone.style.height = H + "px";
+  app.style.width = w + "px"; app.style.height = h + "px";
+  strip.style.height = H - h + "px";
+  app.src = "../../index.html?" + (p.get("q") || "");
+  app.onload = () => {
+    const d = app.contentDocument;
+    d.documentElement.classList.add("vp-short");
+    // the iframe has no safe areas: give the top the phone's 62 pt status-bar inset
+    const st = d.createElement("style");
+    st.textContent = ".topbar{padding-top:72px!important}.hud{padding-top:72px!important}.toasts{top:76px!important}";
+    d.head.appendChild(st);
+    const paint = () => (strip.style.background = getComputedStyle(d.body).backgroundColor);
+    setInterval(paint, 200);
+  };
+</script></body></html>
