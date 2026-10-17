@@ -19,7 +19,8 @@ let BOARD_H = 0;
 const boardEl = document.getElementById("board");
 let blocks = [];
 let exits = [];
-let boardWalls = []; // stumps: fixed squares
+let boardWalls = []; // stumps and holes: fixed squares nothing can enter
+let boardHoles = []; // board shape (build 57): squares cut out of the board; they're also in boardWalls
 let boardLava = []; // lava: slide across, can't stop
 let moves = 0;
 let blastMode = false;
@@ -60,7 +61,25 @@ function renderBoardFeatures() {
   const cellEls = boardEl.querySelectorAll(".cell");
   cellEls.forEach((c) => c.classList.remove("lava"));
   boardLava.forEach(([r, c]) => cellEls[r * COLS + c] && cellEls[r * COLS + c].classList.add("lava"));
+  // holes: the frame reaches into the board there. Each hole joins its hole neighbours across the
+  // gap, and a corner pointing into the board is rounded, so a notch looks moulded, not cut.
+  const isHole = (r, c) => boardHoles.some(([hr, hc]) => hr === r && hc === c);
+  const inside = (r, c) => r >= 0 && r < ROWS && c >= 0 && c < COLS;
+  cellEls.forEach((c) => {
+    c.classList.remove("hole");
+    c.style.cssText = "";
+  });
+  boardHoles.forEach(([r, c]) => {
+    const cell = cellEls[r * COLS + c];
+    if (!cell) return;
+    cell.classList.add("hole");
+    const h = GAP / 2;
+    cell.style.margin = [[-1, 0], [0, 1], [1, 0], [0, -1]].map(([dr, dc]) => (isHole(r + dr, c + dc) ? -h : 0) + "px").join(" ");
+    const round = (dr, dc) => inside(r + dr, c) && inside(r, c + dc) && !isHole(r + dr, c) && !isHole(r, c + dc);
+    cell.style.borderRadius = [[-1, -1], [-1, 1], [1, 1], [1, -1]].map(([dr, dc]) => (round(dr, dc) ? "14px" : "0")).join(" ");
+  });
   boardWalls.forEach(([r, c]) => {
+    if (isHole(r, c)) return; // holes are drawn by their cells, not as stumps
     const s = document.createElement("div");
     s.className = "stump";
     s.style.left = c * STEP + "px";
@@ -70,6 +89,25 @@ function renderBoardFeatures() {
     piecesEl.appendChild(s);
   });
 }
+// Big grids (7 or 8 wide) don't fit a phone at full size: scale the board and its blocks down to the
+// space it has. Standard and small grids stay at their own crisp size (never scaled up).
+// The board keeps its own size in pixels; only #boardScale is scaled, and #boardFit takes the
+// scaled size so it stays centred. Dragging and aiming divide finger distances by the scale.
+function fitBoard() {
+  const wrap = document.querySelector(".board-wrap");
+  const game = document.getElementById("game");
+  if (!wrap || !game || game.hidden) return;
+  const fit = document.getElementById("boardFit"), sc = document.getElementById("boardScale");
+  const w = boardEl.offsetWidth, h = boardEl.offsetHeight;
+  if (!w || !h) return;
+  const k = Math.min(1, (wrap.clientWidth - 16) / w, (wrap.clientHeight - 12) / h);
+  sc.style.transform = k < 1 ? "scale(" + k.toFixed(4) + ")" : "";
+  fit.style.width = w * k + "px";
+  fit.style.height = h * k + "px";
+  boardEl.classList.toggle("scaled", k < 1);
+}
+window.addEventListener("resize", () => setTimeout(fitBoard, 60));
+
 // Ghost (a Workshop gadget): this block's next drag passes through other blocks. It still can't
 // stop on top of one, and stumps and walls still stop it.
 let ghostBlock = null;

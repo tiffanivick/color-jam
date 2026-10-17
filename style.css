@@ -1796,3 +1796,22 @@ body { bottom: auto; height: 100vh; height: 100lvh; }
 .ws-chest.pic { margin-left: -20px; }
 .play-btn { padding: 9px 18px 11px; border-radius: 20px; }
 .play-level { font-size: 29px; }
+
+/* build 57: board shapes. A hole is the frame reaching into the board (see renderBoardFeatures),
+   so boards come with notched corners, bites out of an edge or a hole in the middle. */
+.board .cell.hole, .skin-real .board .cell.hole {
+  background: var(--frame) !important;
+  background-image: linear-gradient(160deg, rgba(255,255,255,0.1), rgba(0,0,0,0.12)) !important;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.1), 0 2px 3px rgba(10, 8, 40, 0.35) !important;
+  position: relative; z-index: 0;
+}
+
+/* build 57: the Hourglass adds its time where you can see it: the clock counts up and glows green,
+   and a "+30s" floats up out of it */
+#game .timer.adding { background: #1f9a4a; box-shadow: inset 0 3px 0 rgba(0,0,0,0.2), 0 0 0 3px #7cf05a, 0 0 22px 4px rgba(120, 255, 140, 0.75); animation: time-pump 0.3s ease-in-out 3; }
+@keyframes time-pump { 50% { transform: scale(1.08); } }
+.time-plus { position: absolute; right: 18px; top: 26px; z-index: 5; pointer-events: none; font-family: var(--display); font-size: 30px; color: #8dff6a; --ol: #1a6a10;
+  text-shadow: 2px 0 0 var(--ol), -2px 0 0 var(--ol), 0 2px 0 var(--ol), 0 -2px 0 var(--ol), 0 4px 0 var(--ol); animation: time-plus 1.4s cubic-bezier(0.2, 0.9, 0.3, 1) forwards; }
+@keyframes time-plus { 0% { opacity: 0; transform: translateY(18px) scale(0.5); } 18% { opacity: 1; transform: translateY(0) scale(1.25); } 30% { transform: scale(1); } 75% { opacity: 1; transform: translateY(-30px); } 100% { opacity: 0; transform: translateY(-46px); } }
+.hourglass-fly { position: absolute; z-index: 60; width: 54px; height: 54px; pointer-events: none; filter: drop-shadow(0 4px 3px rgba(10,6,40,0.35)); }
+.hourglass-fly svg { width: 100%; height: 100%; }

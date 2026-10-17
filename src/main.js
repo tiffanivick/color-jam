@@ -37,20 +37,6 @@
 // ---------------------------------------------------------------- iPhone home-screen app: short page area
 // some iOS versions give the page less height than the screen in standalone mode. the strip below is painted with the
 // theme colour (see setTheme) and the tab bar drops its extra bottom padding so it sits near the bottom edge.
-// Big grids (8 wide) don't fit a phone at full size: scale the board down to the space it has.
-// The board keeps its own size in pixels; only #boardScale is scaled, and #boardFit takes the
-// scaled size so it stays centred. Dragging and aiming divide finger distances by the scale.
-function fitBoard() {
-  const wrap = document.querySelector(".board-wrap");
-  if (!wrap || $("game").hidden) return;
-  const fit = $("boardFit"), sc = $("boardScale");
-  const w = boardEl.offsetWidth, h = boardEl.offsetHeight;
-  if (!w || !h) return;
-  const k = Math.min(1, (wrap.clientWidth - 16) / w, (wrap.clientHeight - 12) / h);
-  sc.style.transform = k < 1 ? "scale(" + k.toFixed(4) + ")" : "";
-  fit.style.width = w * k + "px";
-  fit.style.height = h * k + "px";
-}
 function fixViewport() {
   const standalone = navigator.standalone === true || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
   const portrait = window.matchMedia && matchMedia("(orientation: portrait)").matches;
@@ -60,7 +46,6 @@ function fixViewport() {
 
 }
 ["resize", "orientationchange", "pageshow", "focus"].forEach((ev) => window.addEventListener(ev, () => setTimeout(fixViewport, 50)));
-window.addEventListener("resize", () => setTimeout(fitBoard, 60));
 if (window.visualViewport) visualViewport.addEventListener("resize", () => setTimeout(fixViewport, 50));
 fixViewport();
 setTimeout(fixViewport, 400);

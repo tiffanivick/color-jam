@@ -3,7 +3,7 @@
 Audience: an LLM coding agent (Claude Code) taking over development.
 Repo: `github.com/tiffanivick/color-jam` (branch `main`), deployed by GitHub Pages at
 `https://tiffanivick.github.io/color-jam/`. Owner plays it as an iPhone home-screen web app.
-Current live build: **54** (`?v=54`).
+Current live build: **57** (`?v=57`).
 
 ---
 
@@ -81,6 +81,15 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
   The board may be CSS-scaled to fit the phone: convert pointer coordinates with
   `k = rect.width / boardEl.offsetWidth` (see `boardPoint(e)` in `fx.js`).
 - Fixed features: `walls` (tree stumps, impassable), `lava` (pass through, cannot stop on).
+- Board shapes (build 57): `holes` are squares cut out of the board. They play exactly like walls
+  (`loadLevel` puts them in `boardWalls`, so the engine, `src/solver.js` and the stuck check need
+  nothing new; for `tools/solver3.py` pass them in `walls`). `renderBoardFeatures()` draws them as
+  the frame reaching into the board (`.cell.hole`: joined across gaps to hole neighbours, rounded
+  where a corner points into the board). `tools/shapes.py` gave 37 levels a shape (notched or cut
+  corners, bites out of an edge, a middle hole), each built only from squares that are free and
+  not against a gate, proven winnable by src/solver.js, and never longer than before when solver3
+  can tell. Levels 1-6 and every third level stay plain.
+- `fitBoard()` now lives in `engine.js` (build 57) and adds `.scaled` to the board when it shrinks.
 
 ### 2.2 Blocks ("clusters")
 - A block is one rigid polyomino: `{ color, cells: [[r,c],…], id, …flags }`. It moves as a unit.
@@ -197,6 +206,8 @@ The owner sent Color Block Jam screenshots as the target look. Everything in `st
   Login day on the right. The middle is the level path (`#lvPath`): the current level is a big green
   block, with the next two above it (purple = Hard, red = Very hard, skull badge, lock). Below that
   are the world strip (progress with chest marks; it opens Collection) and the big **Level N** button.
+  Build 57: picking the Hourglass flies it into the clock, which counts up by 30 s, glowing green,
+  with a floating "+30s" (`addTimeFX()` in play.js; the time itself is added at once).
   The world mosaic card and the tiles are gone.
 - **Tab bar**: Shop, Map, Home, Collection, Trophies. The tabs are chunky SVG icons (`ICON.tab*`);
   only the active tab is raised and labelled. Quests have no tab: open them from the Daily side button.

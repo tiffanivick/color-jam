@@ -74,12 +74,56 @@ function startLevel() {
     if (use.length) (usedPower = true), save(), renderTop();
     if (use.includes("hourglass")) {
       timeMax = timeLeft += 30;
-      renderTimer();
-      toast(ICON.hourglass.replace("<svg", '<svg class="t-ic"') + " +30 seconds");
+      addTimeFX(30);
     }
     if (use.includes("rocket")) setTimeout(launchRocket, 450);
   });
 }
+// the Hourglass: it flies up into the clock, which then counts up by the added seconds, glowing
+// green, with a "+30s" floating out. The time is added straight away; this only shows it.
+function addTimeFX(add) {
+  const t = $("timer");
+  const txt = $("timerText");
+  const show = (s) => (txt.textContent = pad(Math.floor(s / 60)) + ":" + pad(s % 60));
+  const to = Math.ceil(timeLeft);
+  const from = Math.max(0, to - add);
+  show(from);
+  const panel = document.querySelector(".time-panel");
+  const pr = panel.getBoundingClientRect();
+  const fly = el("div", "hourglass-fly", ICON.hourglass);
+  $("game").appendChild(fly);
+  const gr = $("game").getBoundingClientRect();
+  const tx = pr.left - gr.left + pr.width / 2 - 27, ty = pr.top - gr.top + pr.height / 2 - 27;
+  fly.animate(
+    [
+      { transform: "translate(" + (gr.width / 2 - 27) + "px," + (gr.height * 0.55) + "px) scale(1.6) rotate(0deg)", opacity: 0 },
+      { opacity: 1, offset: 0.2 },
+      { transform: "translate(" + tx + "px," + ty + "px) scale(0.6) rotate(180deg)", opacity: 1 },
+    ],
+    { duration: 650, easing: "cubic-bezier(.5,0,.4,1)", fill: "forwards" },
+  );
+  const finish = () => {
+    t.classList.remove("adding");
+    if (!timerStarted) renderTimer();
+  };
+  setTimeout(() => {
+    fly.remove();
+    t.classList.add("adding");
+    const plus = el("div", "time-plus", "+" + add + "s");
+    panel.appendChild(plus);
+    setTimeout(() => plus.remove(), 1500);
+    Sfx.coin();
+    const t0 = performance.now();
+    const ms = 900;
+    (function tickUp(now) {
+      const k = Math.min(1, (now - t0) / ms);
+      if (!timerStarted) show(Math.round(from + add * (1 - (1 - k) ** 3)));
+      if (k < 1) requestAnimationFrame(tickUp);
+    })(t0);
+    setTimeout(finish, ms + 150); // also ends it when the browser holds back frames
+  }, 620);
+}
+
 // the Rocket: flies up from the bottom and knocks out one block before you start
 function launchRocket() {
   const pick = blocks.filter((b) => isNeeded(b) && !b.removed && !b.ice && b.lockBy == null && !b.bomb);
@@ -124,7 +168,8 @@ function loadLevel(idx) {
   buildBoard();
   blocks = L.blocks;
   exits = L.exits;
-  boardWalls = L.walls || [];
+  boardHoles = L.holes || [];
+  boardWalls = (L.walls || []).concat(boardHoles);
   boardLava = L.lava || [];
   moves = 0;
   drag = null;

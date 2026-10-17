@@ -111,7 +111,7 @@ let worldStart = []; // global index of the first level of each world
 let worldCount = []; // how many levels in each world
 
 async function loadLevels() {
-  const res = await fetch("levels.json?v=50");
+  const res = await fetch("levels.json?v=57");
   LEVELS = await res.json();
   WORLDS.forEach((_, w) => {
     const idxs = LEVELS.map((l, i) => (l.world === w ? i : -1)).filter((i) => i >= 0);
