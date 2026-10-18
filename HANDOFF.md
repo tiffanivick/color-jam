@@ -3,7 +3,7 @@
 Audience: an LLM coding agent (Claude Code) taking over development.
 Repo: `github.com/tiffanivick/color-jam` (branch `main`), deployed by GitHub Pages at
 `https://tiffanivick.github.io/color-jam/`. Owner plays it as an iPhone home-screen web app.
-Current live build: **59** (`?v=59`).
+Current live build: **60** (`?v=60`).
 
 ---
 
@@ -102,7 +102,17 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
   130 ms fade and shrink (build 59; in 58 the fade started mid-slide).
   Build 59 input: `pointermove` (passive) only records the finger; `applyMove()` runs once per
   frame (rAF) to work out the move, check gates and draw, and `endDrag()` flushes a pending move.
-  `GLIDE_MS` 26 (was 42). `markPlayable()` runs 220 ms after a change, never during a drag. `markPlayable()` (called from `updateBoosters`) dims blocks that can't move or leave right
+  `GLIDE_MS` 26 (was 42). `markPlayable()` runs 220 ms after a change, never during a drag.
+- Build 60, GPU-only release and exit (no left/top CSS transitions): `stopGlide()` just stops the
+  finger-following and leaves the drag transform in place. `settleTo()` does FLIP: First =
+  `drawnAt(el)` (on-screen box / board scale), Last = final left/top set once with transitions off,
+  Invert = a translate3d back to First, Play = `el.animate()` to zero (200 ms,
+  cubic-bezier(0.25, 1, 0.5, 1); comets 240 ms; the blocked-move bump is folded into the same
+  animation). `exitBlock()` sets left/top once to the spot past the gate and runs a single
+  `el.animate()`: from where it is drawn, snap onto the gate's centre line (70 ms), slide through
+  (ease-in), then fade and shrink (130 ms); removed on a timer. Picking a block up while it is still
+  settling cancels the animation and carries on from where it is drawn. Grid rules and thresholds
+  are unchanged. `markPlayable()` (called from `updateBoosters`) dims blocks that can't move or leave right
   now (`.stuck`, opacity 0.68); power-ups still target them. Blocks cleared by the Rocket, gadgets or
   the hammer use `.blasted` (a 0.22 s pop and shrink).
 

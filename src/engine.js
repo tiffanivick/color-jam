@@ -661,18 +661,42 @@ function glide(d) {
 }
 
 // the drag is over: put the block's real position where it is drawn, and drop the transform
+// the drag is over: stop following the finger. The block stays drawn where it is (its drag
+// transform is left in place) until settleTo() or exitBlock() takes over from that exact spot.
 function stopGlide(d) {
   d.stopped = true;
   if (d.raf) cancelAnimationFrame(d.raf);
   d.raf = 0;
-  if (d.cx != null) {
-    d.el.style.transition = "none";
-    d.el.style.transform = "";
-    d.el.style.left = d.cx + "px";
-    d.el.style.top = d.cy + "px";
-    d.el.classList.remove("dragging");
-    void d.el.offsetWidth;
-  }
+}
+
+// Build 60 (FLIP): where a block is drawn right now, in board pixels, whatever is moving it (the drag
+// transform or a running animation): its on-screen box relative to the pieces layer, divided by the
+// board's fit-to-screen scale.
+function drawnAt(el) {
+  const k = boardEl.getBoundingClientRect().width / boardEl.offsetWidth || 1;
+  const r = el.getBoundingClientRect();
+  const p = piecesEl.getBoundingClientRect();
+  return [(r.left - p.left) / k, (r.top - p.top) / k];
+}
+
+// Build 60: settle a released block on its square entirely on the GPU (FLIP). First: where it is
+// drawn. Last: its final left/top, set once with no CSS transition. Invert: a transform puts it back
+// where it was drawn. Play: element.animate() eases that transform to zero. `bump` (optional, px)
+// knocks it against whatever stopped it on the way.
+function settleTo(el, left, top, ms, easing, bump) {
+  const [fx, fy] = drawnAt(el); // First
+  el.getAnimations().forEach((a) => a.cancel());
+  el.classList.remove("dragging");
+  el.style.transition = "none";
+  el.style.transform = "";
+  el.style.left = left + "px"; // Last
+  el.style.top = top + "px";
+  const dx = fx - left; // Invert
+  const dy = fy - top;
+  const frames = [{ transform: `translate3d(${dx}px,${dy}px,0)` }];
+  if (bump) frames.push({ transform: `translate3d(${bump[0]}px,${bump[1]}px,0)`, offset: 0.4 }, { transform: `translate3d(${-bump[0] * 0.3}px,${-bump[1] * 0.3}px,0)`, offset: 0.7 });
+  frames.push({ transform: "translate3d(0,0,0)" });
+  el.animate(frames, { duration: bump ? Math.max(ms, 220) : ms, easing: bump ? "ease-out" : easing }); // Play
 }
 
 function setupDrag(b, el) {
@@ -694,6 +718,12 @@ function setupDrag(b, el) {
       return;
     }
     hooks.start();
+    // picked up again while still settling: carry on from where it is drawn now
+    if (el.getAnimations().length) {
+      const [x, y] = drawnAt(el);
+      el.getAnimations().forEach((a) => a.cancel());
+      el.style.transform = `translate3d(${x - parseFloat(el.style.left)}px,${y - parseFloat(el.style.top)}px,0)`;
+    }
     const reach = computeReachable(b);
     const r0 = Math.min(...b.cells.map((c) => c[0]));
     const c0 = Math.min(...b.cells.map((c) => c[1]));
@@ -899,33 +929,41 @@ function exitBlock(block, el, state) {
 
   // line it up exactly with the gate (across the way out), then slide straight on from where it
   // is, through the gate; the edge of the grid hides the block as it goes
-  el.style.pointerEvents = "none";
+  // build 60: the whole exit is one GPU animation (element.animate on transform/opacity, no
+  // left/top transitions). Its left/top are set once to the final spot past the gate; a transform
+  // starts it where it is drawn now, snaps it onto the gate's centre line (70 ms), slides it straight
+  // through (ease-in, the board edge hides it) and only then fades and shrinks it (130 ms).
+  el.style.pointerEvents = "none"; // no more touches: it's leaving
   el.classList.add("gone", "exiting");
+  el.classList.remove("dragging");
   const x1 = (Math.min(...cols) + state.dc + vc * colSpan) * STEP;
   const y1 = (Math.min(...rows) + state.dr + vr * rowSpan) * STEP;
-  const x0 = vc ? parseFloat(el.style.left) : (Math.min(...cols) + state.dc) * STEP;
-  const y0 = vr ? parseFloat(el.style.top) : (Math.min(...rows) + state.dr) * STEP;
-  // build 58: snappy. A quick snap into line, then it accelerates through the gate and, as it
-  // clears the opening, fades and shrinks away.
+  const [fx, fy] = drawnAt(el); // where it is drawn right now
+  const x0 = vc ? fx : (Math.min(...cols) + state.dc) * STEP; // on the gate's centre line
+  const y0 = vr ? fy : (Math.min(...rows) + state.dr) * STEP;
   const ms = Math.round(150 + 32 * (Math.abs(x1 - x0) + Math.abs(y1 - y0)) / STEP);
-  el.style.transition = "left 70ms ease-out, top 70ms ease-out";
-  el.style.left = x0 + "px";
-  el.style.top = y0 + "px";
-  // build 59: it slides all the way into the gate first; only then does it fade and shrink
-  setTimeout(() => {
-    el.style.transition = `left ${ms}ms cubic-bezier(.45,0,.85,.4), top ${ms}ms cubic-bezier(.45,0,.85,.4)`;
-    el.style.left = x1 + "px";
-    el.style.top = y1 + "px";
-  }, 70);
-  setTimeout(() => {
-    el.style.transformOrigin = "50% 50%";
-    el.style.transition = "transform 130ms ease-in, opacity 130ms ease-in";
-    el.style.transform = "scale(0.55)";
-    el.style.opacity = "0";
-  }, 70 + ms);
-  setTimeout(() => el.remove(), 70 + ms + 160);
+  const SNAP_MS = 70;
+  const FADE_MS = 130;
+  const total = SNAP_MS + ms + FADE_MS;
+  el.getAnimations().forEach((a) => a.cancel());
+  el.style.transition = "none";
+  el.style.transform = "";
+  el.style.transformOrigin = "50% 50%";
+  el.style.left = x1 + "px";
+  el.style.top = y1 + "px";
+  const at = (x, y, extra = "") => `translate3d(${x - x1}px,${y - y1}px,0)${extra}`;
+  el.animate(
+    [
+      { transform: at(fx, fy), opacity: 1, easing: "ease-out" },
+      { transform: at(x0, y0), opacity: 1, offset: SNAP_MS / total, easing: "cubic-bezier(.45,0,.85,.4)" },
+      { transform: at(x1, y1, " scale(1)"), opacity: 1, offset: (SNAP_MS + ms) / total, easing: "ease-in" },
+      { transform: at(x1, y1, " scale(0.55)"), opacity: 0 },
+    ],
+    { duration: total, fill: "forwards" },
+  );
+  setTimeout(() => el.remove(), total + 40); // a timer, so it goes even if frames are held back
   // it drops into the slot: the frame takes a small knock toward the way out
-  setTimeout(() => boardEl.animate([{ transform: "translate(0,0)" }, { transform: `translate(${vc * 2}px, ${vr * 2}px)` }, { transform: "translate(0,0)" }], { duration: 160, easing: "ease-out" }), 70 + ms * 0.5);
+  setTimeout(() => boardEl.animate([{ transform: "translate(0,0)" }, { transform: `translate(${vc * 2}px, ${vr * 2}px)` }, { transform: "translate(0,0)" }], { duration: 160, easing: "ease-out" }), SNAP_MS + ms * 0.5);
 
   refreshIce();
 
@@ -1022,19 +1060,18 @@ function endDrag() {
   }
 
   // build 59: pushed but nothing gave way: a small bump against whatever is in the way
+  let bump = null;
   if (best.dr === 0 && best.dc === 0 && !block.comet) {
     const t = d.target;
     const big = Math.max(Math.abs(t[0]), Math.abs(t[1]));
     if (big >= 0.35) {
       const h = Math.abs(t[0]) >= Math.abs(t[1]);
-      const sx = h ? Math.sign(t[0]) * 5 : 0, sy = h ? 0 : Math.sign(t[1]) * 5;
-      el.animate([{ transform: "translate(0,0)" }, { transform: `translate(${sx}px,${sy}px)` }, { transform: `translate(${-sx * 0.3}px,${-sy * 0.3}px)` }, { transform: "translate(0,0)" }], { duration: 220, easing: "ease-out" });
+      bump = h ? [Math.sign(t[0]) * 5, 0] : [0, Math.sign(t[1]) * 5];
       if (window.Sfx && Sfx.thud) Sfx.thud();
     }
   }
-  el.style.transition = block.comet ? "left 0.24s cubic-bezier(.25,.1,.25,1), top 0.24s cubic-bezier(.25,.1,.25,1)" : "left 0.18s cubic-bezier(.2,.8,.3,1), top 0.18s cubic-bezier(.2,.8,.3,1)";
-  el.style.left = baseLeft + best.dc * STEP + "px";
-  el.style.top = baseTop + best.dr * STEP + "px";
+  // build 60: settle with FLIP on the GPU (was a left/top CSS transition)
+  settleTo(el, baseLeft + best.dc * STEP, baseTop + best.dr * STEP, block.comet ? 240 : 200, block.comet ? "cubic-bezier(.25,.1,.25,1)" : "cubic-bezier(0.25, 1, 0.5, 1)", bump);
   if (best.dr !== 0 || best.dc !== 0) {
     undoStack.push({ snap: blocks.map((o) => o.cells), pillars: blocks.map((o) => o.pillarLeft) });
     block.cells = shiftCells(block.cells, best.dr, best.dc);
