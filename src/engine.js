@@ -55,6 +55,8 @@ function buildBoard() {
 // a block may be locked in a few ways: ice (thaws as other blocks leave),
 // chains (locked until its key block leaves), or it may only slide one way.
 const dirsFor = (b) => (b.axis === "h" ? ["left", "right"] : b.axis === "v" ? ["up", "down"] : ["left", "right", "up", "down"]);
+// Shape does not restrict exits; only directional blocks are limited to their allowed travel axis.
+const exitMatchesOrientation = (block, dir) => dirsFor(block).includes(dir);
 const isNeeded = (b) => !b.gray && !b.crate && !b.pillar; // blocks that must leave for the level to be won
 // stumps (fixed squares) and lava tiles live on the board itself, not in blocks
 function renderBoardFeatures() {
@@ -90,9 +92,8 @@ function renderBoardFeatures() {
     piecesEl.appendChild(s);
   });
 }
-// Build 58: blocks that can't do anything right now (no square to move to and no way out, or
-// frozen/chained) are dimmed, so the moves you have stand out. Crates (tap to smash) and sand
-// pillars aren't pieces you play, so they're never dimmed. Power-ups can still target any block.
+// Build 58: mark blocks that can't move right now (no square to move to and no way out, or
+// frozen/chained). Crates and sand pillars aren't pieces you play. Power-ups can still target any block.
 function markPlayable() {
   blocks.forEach((b) => {
     if (!b.el || b.removed) return;
@@ -461,12 +462,13 @@ function computeReachable(block) {
   const start = { dr: 0, dc: 0, exitDir: null };
   reach.set(stateKey(0, 0), start);
   const dirs = dirsFor(block);
+  const exitDirs = dirs.filter((dir) => exitMatchesOrientation(block, dir));
 
   // comet: only straight lines; it comes to rest at the end of a line, or (build 45) at the
   // first square where a gate of its colour is straight off to its side with a clear way out,
   // so the next flick sends it through
   if (block.comet) {
-    const gate0 = dirs.find((dir) => tryStep(block, block.cells, dir).status === "exit");
+    const gate0 = exitDirs.find((dir) => tryStep(block, block.cells, dir).status === "exit");
     if (gate0) start.exitDir = gate0;
     for (const dir of dirs) {
       let s = start;
@@ -474,7 +476,7 @@ function computeReachable(block) {
       for (;;) {
         const t = tryStep(block, cells, dir);
         if (t.status === "exit") {
-          if (s !== start) s.exitDir = dir;
+          if (s !== start && exitMatchesOrientation(block, dir)) s.exitDir = dir;
           break;
         }
         if (t.status !== "move") break;
@@ -492,7 +494,7 @@ function computeReachable(block) {
 
   // jelly: one square per drag, and it can only leave from where it already is
   if (block.jelly) {
-    const gate0 = dirs.find((dir) => tryStep(block, block.cells, dir).status === "exit");
+    const gate0 = exitDirs.find((dir) => tryStep(block, block.cells, dir).status === "exit");
     if (gate0) start.exitDir = gate0;
     for (const dir of dirs) {
       const t = tryStep(block, block.cells, dir);
@@ -509,7 +511,7 @@ function computeReachable(block) {
     const s = queue.shift();
     const cells = shiftCells(block.cells, s.dr, s.dc);
 
-    const gate = dirs.find(
+    const gate = exitDirs.find(
       (dir) => tryStep(block, cells, dir).status === "exit",
     );
     if (gate) s.exitDir = gate;
@@ -593,12 +595,24 @@ const PUSH = 0.3;
 function gatePush(d, push) {
   for (const dir of dirsFor(d.block)) {
     const [vr, vc] = DIRS[dir];
+    if (!exitMatchesOrientation(d.block, dir)) continue;
     // locked exactly in line across the way out; along it, measure from the square it is
     // leaving (it may already be part-way to the next one)
     // (a looser test than the drawn snap: within 0.3 of a square's line counts as in line)
     const ac = vc ? d.pos[1] : d.pos[0];
     const across0 = Math.round(ac);
     if (Math.abs(ac - across0) > 0.3) continue;
+    // Reaching an edge while merely adjacent to a gate is not enough: this drag
+    // must actively point outward through that gate.
+    const pushAlong = d.target[0] * vc + d.target[1] * vr;
+    if (pushAlong <= 0) continue;
+    // Require the finger to push the block's leading edge at least 0.3 squares
+    // beyond the perimeter line next to the gate; alignment alone cannot trigger an exit.
+    const axisCells = vc ? d.block.cells.map(([, c]) => c) : d.block.cells.map(([r]) => r);
+    const positive = vr + vc > 0;
+    const leading = (positive ? Math.max(...axisCells) : Math.min(...axisCells)) + (vc ? d.target[0] : d.target[1]);
+    const crossed = positive ? leading >= (vc ? COLS : ROWS) - 1 + 0.3 : leading <= -0.3;
+    if (!crossed) continue;
     const a = vc ? d.pos[0] : d.pos[1];
     const base = vc + vr > 0 ? Math.floor(a + 1e-6) : Math.ceil(a - 1e-6);
     const s = d.reach.get(vc ? stateKey(across0, base) : stateKey(base, across0));
@@ -681,9 +695,8 @@ function drawnAt(el) {
 
 // Build 60: settle a released block on its square entirely on the GPU (FLIP). First: where it is
 // drawn. Last: its final left/top, set once with no CSS transition. Invert: a transform puts it back
-// where it was drawn. Play: element.animate() eases that transform to zero. `bump` (optional, px)
-// knocks it against whatever stopped it on the way.
-function settleTo(el, left, top, ms, easing, bump) {
+// where it was drawn. Play: element.animate() eases that transform to zero.
+function settleTo(el, left, top) {
   const [fx, fy] = drawnAt(el); // First
   el.getAnimations().forEach((a) => a.cancel());
   el.classList.remove("dragging");
@@ -693,10 +706,16 @@ function settleTo(el, left, top, ms, easing, bump) {
   el.style.top = top + "px";
   const dx = fx - left; // Invert
   const dy = fy - top;
-  const frames = [{ transform: `translate3d(${dx}px,${dy}px,0)` }];
-  if (bump) frames.push({ transform: `translate3d(${bump[0]}px,${bump[1]}px,0)`, offset: 0.4 }, { transform: `translate3d(${-bump[0] * 0.3}px,${-bump[1] * 0.3}px,0)`, offset: 0.7 });
-  frames.push({ transform: "translate3d(0,0,0)" });
-  el.animate(frames, { duration: bump ? Math.max(ms, 220) : ms, easing: bump ? "ease-out" : easing }); // Play
+  const start = `translate3d(${dx}px,${dy}px,0)`;
+  el.style.transform = start;
+  const animation = el.animate(
+    [{ transform: start }, { transform: "translate3d(0,0,0)" }],
+    { duration: 200, easing: "cubic-bezier(0.25, 1, 0.5, 1)" },
+  ); // Play
+  animation.onfinish = () => {
+    el.style.transform = "translate3d(0,0,0)";
+    el.style.transform = "";
+  };
 }
 
 function setupDrag(b, el) {
@@ -1035,7 +1054,7 @@ function endDrag() {
     const amt = ax === "h" ? t[0] : t[1];
     const dir = ax === "h" ? (amt > 0 ? "right" : "left") : amt > 0 ? "down" : "up";
     best = reach.get(stateKey(0, 0));
-    if (Math.abs(amt) >= 0.3 && dirsFor(block).includes(dir)) {
+    if (Math.abs(amt) >= 0.3 && dirsFor(block).includes(dir) && exitMatchesOrientation(block, dir)) {
       let end = best;
       for (const s of reach.values()) if (s.line === dir && s.lineEnd) end = s;
       if (tryStep(block, shiftCells(block.cells, end.dr, end.dc), dir).status === "exit") return exitBlock(block, el, Object.assign({}, end, { exitDir: dir }));
@@ -1056,22 +1075,19 @@ function endDrag() {
   // let go while pushing a lined-up block into its gate: it goes through
   if (!block.comet) {
     const gate = gatePush(d, PUSH * 0.75);
-    if (gate) return exitBlock(block, el, gate);
+    if (gate && exitMatchesOrientation(block, gate.exitDir)) return exitBlock(block, el, gate);
   }
 
-  // build 59: pushed but nothing gave way: a small bump against whatever is in the way
-  let bump = null;
+  // build 59: pushed but nothing gave way: play the thud sound on a firm stop
   if (best.dr === 0 && best.dc === 0 && !block.comet) {
     const t = d.target;
     const big = Math.max(Math.abs(t[0]), Math.abs(t[1]));
     if (big >= 0.35) {
-      const h = Math.abs(t[0]) >= Math.abs(t[1]);
-      bump = h ? [Math.sign(t[0]) * 5, 0] : [0, Math.sign(t[1]) * 5];
       if (window.Sfx && Sfx.thud) Sfx.thud();
     }
   }
   // build 60: settle with FLIP on the GPU (was a left/top CSS transition)
-  settleTo(el, baseLeft + best.dc * STEP, baseTop + best.dr * STEP, block.comet ? 240 : 200, block.comet ? "cubic-bezier(.25,.1,.25,1)" : "cubic-bezier(0.25, 1, 0.5, 1)", bump);
+  settleTo(el, baseLeft + best.dc * STEP, baseTop + best.dr * STEP);
   if (best.dr !== 0 || best.dc !== 0) {
     undoStack.push({ snap: blocks.map((o) => o.cells), pillars: blocks.map((o) => o.pillarLeft) });
     block.cells = shiftCells(block.cells, best.dr, best.dc);

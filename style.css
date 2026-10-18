@@ -1821,7 +1821,7 @@ body { bottom: auto; height: 100vh; height: 100lvh; }
 /* the block you're dragging rides on its own GPU layer, above the others */
 .block-group.dragging { will-change: transform; z-index: 8; }
 /* blocks that can't move right now: slightly see-through, still clearly 3D */
-.board .block-group.stuck { opacity: 0.68; transition: opacity 0.2s ease; }
+.board .block-group.stuck { opacity: 1; transition: none; }
 /* a block cleared by the Rocket, a gadget or the hammer: a quick pop, then it shrinks away */
 .block-group.blasted { transition: none; transform-origin: 50% 50%; animation: snap-clear 0.22s cubic-bezier(0.4, 0, 0.8, 0.4) forwards; }
 @keyframes snap-clear { 0% { transform: scale(1); opacity: 1; } 28% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(0.3); opacity: 0; } }
