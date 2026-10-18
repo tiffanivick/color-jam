@@ -508,6 +508,7 @@ const BOOSTERS = [
   { id: "freeze", btn: "boosterFreeze", cnt: "cntFreeze" },
   { id: "vacuum", btn: "boosterVac", cnt: "cntVac" },
 ];
+let playableTimer = 0;
 function updateBoosters() {
   const live = blocks.some((b) => isNeeded(b) && !b.removed);
   // power-ups unlock once the clock is running (your first move starts it)
@@ -527,7 +528,10 @@ function updateBoosters() {
   $("boosterHammer").classList.toggle("active", toolMode === "hammer");
   $("boosterVac").classList.toggle("active", toolMode === "vacuum");
   updateGadgets(can);
-  markPlayable(); // dim blocks that can't move right now (engine.js)
+  // dim blocks that can't move right now (engine.js); after the block has settled, so the check
+  // never holds up the slide itself
+  clearTimeout(playableTimer);
+  playableTimer = setTimeout(() => !drag && markPlayable(), 220);
   queueStuckCheck();
 }
 function buyPrompt(id) {

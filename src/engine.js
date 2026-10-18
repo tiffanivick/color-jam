@@ -11,6 +11,7 @@ const PADDING = 0; // space between squares and the frame (matches .board paddin
 const BORDER = 14; // thickness of the frame (matches .board border)
 const RING = 3; // the frame's outer edge line
 const GATE_THICK = BORDER + RING; // gates fill the frame wall plus the padding
+const GATE_OUT = 4; // build 59: and stand this far proud of the frame, like chunky toy bars
 const STEP = CELL + GAP; // distance in pixels from one square to the next
 
 let BOARD_W = 0; // pixel width/height of the grid, set in buildBoard
@@ -107,11 +108,10 @@ function markPlayable() {
   });
 }
 
-// Big grids (7 or 8 wide) don't fit a phone at full size: scale the board and its blocks down to the
-// space it has. Standard and small grids stay at their own crisp size (never scaled up).
+// The board is scaled to fit the screen: small grids grow, big grids (7 or 8 wide) shrink.
 // The board keeps its own size in pixels; only #boardScale is scaled, and #boardFit takes the
 // scaled size so it stays centred. Dragging and aiming divide finger distances by the scale.
-const BOARD_BASE = 0.92;
+const BOARD_MAX = 1.3;
 function fitBoard() {
   const wrap = document.querySelector(".board-wrap");
   const game = document.getElementById("game");
@@ -119,11 +119,10 @@ function fitBoard() {
   const fit = document.getElementById("boardFit"), sc = document.getElementById("boardScale");
   const w = boardEl.offsetWidth, h = boardEl.offsetHeight;
   if (!w || !h) return;
-  // build 58: blocks a little smaller everywhere (BOARD_BASE), small boards a little bigger to fill
-  // the screen (up to 10% for 5 wide), big boards whatever fits. The 3D block images are drawn at
-  // twice the needed sharpness, so the small step up stays crisp.
-  const want = BOARD_BASE * (COLS <= 5 ? 1.1 : COLS === 6 ? 1.04 : 1);
-  const k = Math.min(want, (wrap.clientWidth - 16) / w, (wrap.clientHeight - 12) / h);
+  // build 59: like Color Block Jam, the board fills the width of the screen (a 12px margin each
+  // side, gates included) as far as the height allows. Capped at BOARD_MAX so the 3D block images
+  // (drawn at twice the needed sharpness) stay crisp.
+  const k = Math.min(BOARD_MAX, (wrap.clientWidth - 24 - 2 * GATE_OUT) / w, (wrap.clientHeight - 12) / h);
   sc.style.transform = k !== 1 ? "scale(" + k.toFixed(4) + ")" : "";
   fit.style.width = w * k + "px";
   fit.style.height = h * k + "px";
@@ -378,25 +377,26 @@ function renderExit(e) {
   const spanPx = span * CELL + (span - 1) * GAP;
 
   // gates are cut into the frame: they fill the wall and the padding in front of it
+  const T = GATE_THICK + GATE_OUT;
   if (e.side === "right") {
     el.style.left = PADDING + BOARD_W + "px";
     el.style.top = PADDING + e.index * STEP + "px";
-    el.style.width = GATE_THICK + "px";
+    el.style.width = T + "px";
     el.style.height = spanPx + "px";
   } else if (e.side === "left") {
-    el.style.left = PADDING - GATE_THICK + "px";
+    el.style.left = PADDING - T + "px";
     el.style.top = PADDING + e.index * STEP + "px";
-    el.style.width = GATE_THICK + "px";
+    el.style.width = T + "px";
     el.style.height = spanPx + "px";
   } else if (e.side === "bottom") {
     el.style.top = PADDING + BOARD_H + "px";
     el.style.left = PADDING + e.index * STEP + "px";
-    el.style.height = GATE_THICK + "px";
+    el.style.height = T + "px";
     el.style.width = spanPx + "px";
   } else if (e.side === "top") {
-    el.style.top = PADDING - GATE_THICK + "px";
+    el.style.top = PADDING - T + "px";
     el.style.left = PADDING + e.index * STEP + "px";
-    el.style.height = GATE_THICK + "px";
+    el.style.height = T + "px";
     el.style.width = spanPx + "px";
   }
 
@@ -628,7 +628,7 @@ function showGateReady(d) {
 // The block eases toward where the pointer wants it each frame, instead of
 // jumping there, so movement feels soft. GLIDE_MS: how quickly it catches up (time-based, so it
 // feels the same at 60 and 120 frames a second); higher = softer.
-const GLIDE_MS = 42;
+const GLIDE_MS = 26; // build 59: follows the finger more tightly (was 42)
 
 // Build 58: while dragging, the block moves with a GPU transform (no page layout each frame, so no
 // micro-stutters on iPhone); its real left/top are set once, when the drag ends (stopGlide).
@@ -911,20 +911,19 @@ function exitBlock(block, el, state) {
   el.style.transition = "left 70ms ease-out, top 70ms ease-out";
   el.style.left = x0 + "px";
   el.style.top = y0 + "px";
+  // build 59: it slides all the way into the gate first; only then does it fade and shrink
   setTimeout(() => {
     el.style.transition = `left ${ms}ms cubic-bezier(.45,0,.85,.4), top ${ms}ms cubic-bezier(.45,0,.85,.4)`;
     el.style.left = x1 + "px";
     el.style.top = y1 + "px";
-    el.animate(
-      [
-        { transform: "scale(1)", opacity: 1 },
-        { transform: "scale(1)", opacity: 1, offset: 0.45 },
-        { transform: "scale(0.55)", opacity: 0 },
-      ],
-      { duration: ms, easing: "ease-in", fill: "forwards" },
-    );
   }, 70);
-  setTimeout(() => el.remove(), ms + 120);
+  setTimeout(() => {
+    el.style.transformOrigin = "50% 50%";
+    el.style.transition = "transform 130ms ease-in, opacity 130ms ease-in";
+    el.style.transform = "scale(0.55)";
+    el.style.opacity = "0";
+  }, 70 + ms);
+  setTimeout(() => el.remove(), 70 + ms + 160);
   // it drops into the slot: the frame takes a small knock toward the way out
   setTimeout(() => boardEl.animate([{ transform: "translate(0,0)" }, { transform: `translate(${vc * 2}px, ${vr * 2}px)` }, { transform: "translate(0,0)" }], { duration: 160, easing: "ease-out" }), 70 + ms * 0.5);
 
@@ -934,11 +933,31 @@ function exitBlock(block, el, state) {
   checkWin();
 }
 
-window.addEventListener("pointermove", (e) => {
-  if (!drag) return;
-  drag.target = [(e.clientX - drag.startX) / (STEP * drag.k), (e.clientY - drag.startY) / (STEP * drag.k)];
+// Build 59: touch input and drawing are decoupled. A touch event only records where the finger is
+// (phones send them faster than the screen redraws); once per frame, applyMove() works out where
+// the block may go, checks the gates and draws it, so the work never piles up between frames.
+let pendingMove = null;
+let moveRaf = 0;
+window.addEventListener(
+  "pointermove",
+  (e) => {
+    if (!drag) return;
+    pendingMove = [e.clientX, e.clientY];
+    if (!moveRaf) moveRaf = requestAnimationFrame(applyMove);
+  },
+  { passive: true },
+);
+function applyMove() {
+  moveRaf = 0;
+  if (!drag || !pendingMove) return;
+  const [px, py] = pendingMove;
+  pendingMove = null;
+  drag.target = [(px - drag.startX) / (STEP * drag.k), (py - drag.startY) / (STEP * drag.k)];
   dragTo(drag, drag.target[0], drag.target[1]);
   showPos(drag);
+  // draw it in this same frame rather than waiting for the next one
+  if (drag.raf) cancelAnimationFrame(drag.raf);
+  glide(drag);
   // a comet launches the moment it's flicked (no need to let go)
   if (drag.block.comet && Math.max(Math.abs(drag.target[0]), Math.abs(drag.target[1])) >= 0.45) return endDrag();
   const gate = drag.block.comet ? null : gatePush(drag, PUSH);
@@ -952,9 +971,12 @@ window.addEventListener("pointermove", (e) => {
     return;
   }
   showGateReady(drag);
-});
+}
 
 function endDrag() {
+  // a finger movement not yet drawn still counts (it may push the block into its gate)
+  if (moveRaf) cancelAnimationFrame(moveRaf), (moveRaf = 0);
+  if (drag && pendingMove) applyMove();
   if (!drag) return;
   const d = drag;
   const { block, el, reach, pos, baseLeft, baseTop } = d;
@@ -999,6 +1021,17 @@ function endDrag() {
     if (gate) return exitBlock(block, el, gate);
   }
 
+  // build 59: pushed but nothing gave way: a small bump against whatever is in the way
+  if (best.dr === 0 && best.dc === 0 && !block.comet) {
+    const t = d.target;
+    const big = Math.max(Math.abs(t[0]), Math.abs(t[1]));
+    if (big >= 0.35) {
+      const h = Math.abs(t[0]) >= Math.abs(t[1]);
+      const sx = h ? Math.sign(t[0]) * 5 : 0, sy = h ? 0 : Math.sign(t[1]) * 5;
+      el.animate([{ transform: "translate(0,0)" }, { transform: `translate(${sx}px,${sy}px)` }, { transform: `translate(${-sx * 0.3}px,${-sy * 0.3}px)` }, { transform: "translate(0,0)" }], { duration: 220, easing: "ease-out" });
+      if (window.Sfx && Sfx.thud) Sfx.thud();
+    }
+  }
   el.style.transition = block.comet ? "left 0.24s cubic-bezier(.25,.1,.25,1), top 0.24s cubic-bezier(.25,.1,.25,1)" : "left 0.18s cubic-bezier(.2,.8,.3,1), top 0.18s cubic-bezier(.2,.8,.3,1)";
   el.style.left = baseLeft + best.dc * STEP + "px";
   el.style.top = baseTop + best.dr * STEP + "px";

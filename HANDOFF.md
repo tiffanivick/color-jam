@@ -3,7 +3,7 @@
 Audience: an LLM coding agent (Claude Code) taking over development.
 Repo: `github.com/tiffanivick/color-jam` (branch `main`), deployed by GitHub Pages at
 `https://tiffanivick.github.io/color-jam/`. Owner plays it as an iPhone home-screen web app.
-Current live build: **58** (`?v=58`).
+Current live build: **59** (`?v=59`).
 
 ---
 
@@ -90,12 +90,19 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
   not against a gate, proven winnable by src/solver.js, and never longer than before when solver3
   can tell. Levels 1-6 and every third level stay plain.
 - `fitBoard()` now lives in `engine.js` (build 57) and adds `.scaled` to the board when it shrinks.
-  Build 58: boards sit at `BOARD_BASE` 0.92 (blocks ~12% smaller than build 57), 6-wide boards at
-  0.92 x 1.04 and 5-wide at 0.92 x 1.1 so small boards fill the screen; big boards whatever fits.
+  Build 59 (Color Block Jam proportions): the board fills the screen width (12px margin each side,
+  gates included) as far as the height allows, capped at `BOARD_MAX` 1.3; this replaces build 58's
+  0.92 base. Gates stand `GATE_OUT` (4px) proud of the frame with big white arrows; the frame is a
+  darker navy rim (`#game --frame`) with no corner screws. Pushing a block that can't move gives a
+  small bump in that direction (end of `endDrag`).
 - Build 58 feel: while dragging, a block moves by `transform: translate3d` (class `.dragging`), and
   `stopGlide()` writes the real left/top when the drag ends, so no page layout runs per frame.
-  Exits: a 70 ms snap into line, then an accelerating slide through the gate that fades and shrinks
-  (WAAPI). `markPlayable()` (called from `updateBoosters`) dims blocks that can't move or leave right
+  Exits: a 70 ms snap into line, then an accelerating slide all the way through the gate (the
+  `.pieces` layer clips it at the board edge, so it disappears into the gate), and only after that a
+  130 ms fade and shrink (build 59; in 58 the fade started mid-slide).
+  Build 59 input: `pointermove` (passive) only records the finger; `applyMove()` runs once per
+  frame (rAF) to work out the move, check gates and draw, and `endDrag()` flushes a pending move.
+  `GLIDE_MS` 26 (was 42). `markPlayable()` runs 220 ms after a change, never during a drag. `markPlayable()` (called from `updateBoosters`) dims blocks that can't move or leave right
   now (`.stuck`, opacity 0.68); power-ups still target them. Blocks cleared by the Rocket, gadgets or
   the hammer use `.blasted` (a 0.22 s pop and shrink).
 

@@ -1825,3 +1825,19 @@ body { bottom: auto; height: 100vh; height: 100lvh; }
 /* a block cleared by the Rocket, a gadget or the hammer: a quick pop, then it shrinks away */
 .block-group.blasted { transition: none; transform-origin: 50% 50%; animation: snap-clear 0.22s cubic-bezier(0.4, 0, 0.8, 0.4) forwards; }
 @keyframes snap-clear { 0% { transform: scale(1); opacity: 1; } 28% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(0.3); opacity: 0; } }
+
+/* build 59: Color Block Jam board. A chunky dark navy rim lit along its top edge, no corner screws,
+   and gates as thick glossy bars standing proud of the frame with a big white arrow. */
+#game { --frame: #363c58; --frame-edge: #232740; }
+#game .board { box-shadow: 0 0 0 3px var(--frame-edge), inset 0 3px 0 rgba(255,255,255,0.12), 0 -2px 0 3px rgba(150, 160, 230, 0.28), 0 7px 0 2px #1c2036, 0 18px 26px -6px rgba(20, 24, 60, 0.45); }
+#game .board::before, #game .board::after { display: none; }
+#game .exit { filter: drop-shadow(0 3px 0 rgba(10, 12, 40, 0.45)); }
+#game .exit-left { border-radius: 12px 4px 4px 12px; }
+#game .exit-right { border-radius: 4px 12px 12px 4px; }
+#game .exit-top { border-radius: 12px 12px 4px 4px; }
+#game .exit-bottom { border-radius: 4px 4px 12px 12px; }
+#game .exit::after { border-width: 7px; opacity: 1; filter: drop-shadow(0 1px 0 rgba(0,0,0,0.25)); }
+#game .exit-right::after { border-left: 9px solid #fff; border-right: 0; top: calc(50% - 7px); right: 7px; }
+#game .exit-left::after { border-right: 9px solid #fff; border-left: 0; top: calc(50% - 7px); left: 7px; }
+#game .exit-top::after { border-bottom: 9px solid #fff; border-top: 0; left: calc(50% - 7px); top: 7px; }
+#game .exit-bottom::after { border-top: 9px solid #fff; border-bottom: 0; left: calc(50% - 7px); bottom: 7px; }
