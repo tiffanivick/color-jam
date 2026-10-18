@@ -5,8 +5,8 @@
 // ---------- board geometry ----------
 let ROWS = 6; // set per level from levels.json
 let COLS = 6;
-const CELL = 48; // pixel size of one square
-const GAP = 6; // gap between squares (matches .board gap)
+const CELL = 46; // pixel size of one square (build 58: 48 -> 46 with a wider gap, same pitch)
+const GAP = 8; // gap between squares (matches .board gap)
 const PADDING = 0; // space between squares and the frame (matches .board padding)
 const BORDER = 14; // thickness of the frame (matches .board border)
 const RING = 3; // the frame's outer edge line
@@ -89,10 +89,29 @@ function renderBoardFeatures() {
     piecesEl.appendChild(s);
   });
 }
+// Build 58: blocks that can't do anything right now (no square to move to and no way out, or
+// frozen/chained) are dimmed, so the moves you have stand out. Crates (tap to smash) and sand
+// pillars aren't pieces you play, so they're never dimmed. Power-ups can still target any block.
+function markPlayable() {
+  blocks.forEach((b) => {
+    if (!b.el || b.removed) return;
+    let stuck = false;
+    if (!b.crate && !b.pillar && !levelOver) {
+      if (isFrozen(b)) stuck = true;
+      else {
+        const reach = computeReachable(b);
+        stuck = ![...reach.values()].some((s) => s.exitDir || ((s.dr || s.dc) && !s.noStop));
+      }
+    }
+    b.el.classList.toggle("stuck", stuck);
+  });
+}
+
 // Big grids (7 or 8 wide) don't fit a phone at full size: scale the board and its blocks down to the
 // space it has. Standard and small grids stay at their own crisp size (never scaled up).
 // The board keeps its own size in pixels; only #boardScale is scaled, and #boardFit takes the
 // scaled size so it stays centred. Dragging and aiming divide finger distances by the scale.
+const BOARD_BASE = 0.92;
 function fitBoard() {
   const wrap = document.querySelector(".board-wrap");
   const game = document.getElementById("game");
@@ -100,8 +119,12 @@ function fitBoard() {
   const fit = document.getElementById("boardFit"), sc = document.getElementById("boardScale");
   const w = boardEl.offsetWidth, h = boardEl.offsetHeight;
   if (!w || !h) return;
-  const k = Math.min(1, (wrap.clientWidth - 16) / w, (wrap.clientHeight - 12) / h);
-  sc.style.transform = k < 1 ? "scale(" + k.toFixed(4) + ")" : "";
+  // build 58: blocks a little smaller everywhere (BOARD_BASE), small boards a little bigger to fill
+  // the screen (up to 10% for 5 wide), big boards whatever fits. The 3D block images are drawn at
+  // twice the needed sharpness, so the small step up stays crisp.
+  const want = BOARD_BASE * (COLS <= 5 ? 1.1 : COLS === 6 ? 1.04 : 1);
+  const k = Math.min(want, (wrap.clientWidth - 16) / w, (wrap.clientHeight - 12) / h);
+  sc.style.transform = k !== 1 ? "scale(" + k.toFixed(4) + ")" : "";
   fit.style.width = w * k + "px";
   fit.style.height = h * k + "px";
   boardEl.classList.toggle("scaled", k < 1);
@@ -607,9 +630,16 @@ function showGateReady(d) {
 // feels the same at 60 and 120 frames a second); higher = softer.
 const GLIDE_MS = 42;
 
+// Build 58: while dragging, the block moves with a GPU transform (no page layout each frame, so no
+// micro-stutters on iPhone); its real left/top are set once, when the drag ends (stopGlide).
 function showPos(d) {
   d.tx = d.baseLeft + snapAxis(d.pos[0]) * STEP;
   d.ty = d.baseTop + snapAxis(d.pos[1]) * STEP;
+  if (d.cx == null) {
+    d.cx = d.baseLeft;
+    d.cy = d.baseTop;
+    d.el.classList.add("dragging");
+  }
   if (!d.raf) d.raf = requestAnimationFrame(() => glide(d));
 }
 
@@ -620,21 +650,29 @@ function glide(d) {
   const dt = Math.min(50, now - (d.lastGlide || now - 16));
   d.lastGlide = now;
   const k = 1 - Math.exp(-dt / GLIDE_MS);
-  const cx = parseFloat(d.el.style.left);
-  const cy = parseFloat(d.el.style.top);
-  let nx = cx + (d.tx - cx) * k;
-  let ny = cy + (d.ty - cy) * k;
-  if (Math.abs(d.tx - nx) < 0.4) nx = d.tx;
-  if (Math.abs(d.ty - ny) < 0.4) ny = d.ty;
-  d.el.style.left = nx + "px";
-  d.el.style.top = ny + "px";
+  let nx = d.cx + (d.tx - d.cx) * k;
+  let ny = d.cy + (d.ty - d.cy) * k;
+  if (Math.abs(d.tx - nx) < 0.3) nx = d.tx;
+  if (Math.abs(d.ty - ny) < 0.3) ny = d.ty;
+  d.cx = nx;
+  d.cy = ny;
+  d.el.style.transform = "translate3d(" + (nx - d.baseLeft).toFixed(2) + "px," + (ny - d.baseTop).toFixed(2) + "px,0)";
   if (nx !== d.tx || ny !== d.ty) d.raf = requestAnimationFrame(() => glide(d));
 }
 
+// the drag is over: put the block's real position where it is drawn, and drop the transform
 function stopGlide(d) {
   d.stopped = true;
   if (d.raf) cancelAnimationFrame(d.raf);
   d.raf = 0;
+  if (d.cx != null) {
+    d.el.style.transition = "none";
+    d.el.style.transform = "";
+    d.el.style.left = d.cx + "px";
+    d.el.style.top = d.cy + "px";
+    d.el.classList.remove("dragging");
+    void d.el.offsetWidth;
+  }
 }
 
 function setupDrag(b, el) {
@@ -867,18 +905,28 @@ function exitBlock(block, el, state) {
   const y1 = (Math.min(...rows) + state.dr + vr * rowSpan) * STEP;
   const x0 = vc ? parseFloat(el.style.left) : (Math.min(...cols) + state.dc) * STEP;
   const y0 = vr ? parseFloat(el.style.top) : (Math.min(...rows) + state.dr) * STEP;
-  const ms = Math.round(200 + 45 * (Math.abs(x1 - x0) + Math.abs(y1 - y0)) / STEP);
-  el.style.transition = "none";
+  // build 58: snappy. A quick snap into line, then it accelerates through the gate and, as it
+  // clears the opening, fades and shrinks away.
+  const ms = Math.round(150 + 32 * (Math.abs(x1 - x0) + Math.abs(y1 - y0)) / STEP);
+  el.style.transition = "left 70ms ease-out, top 70ms ease-out";
   el.style.left = x0 + "px";
   el.style.top = y0 + "px";
-  void el.offsetWidth;
-  el.style.transition = `left ${ms}ms ease-in, top ${ms}ms ease-in, opacity ${ms}ms ease-in`;
-  el.style.left = x1 + "px";
-  el.style.top = y1 + "px";
-  el.style.opacity = "0.2";
-  setTimeout(() => el.remove(), ms + 50);
+  setTimeout(() => {
+    el.style.transition = `left ${ms}ms cubic-bezier(.45,0,.85,.4), top ${ms}ms cubic-bezier(.45,0,.85,.4)`;
+    el.style.left = x1 + "px";
+    el.style.top = y1 + "px";
+    el.animate(
+      [
+        { transform: "scale(1)", opacity: 1 },
+        { transform: "scale(1)", opacity: 1, offset: 0.45 },
+        { transform: "scale(0.55)", opacity: 0 },
+      ],
+      { duration: ms, easing: "ease-in", fill: "forwards" },
+    );
+  }, 70);
+  setTimeout(() => el.remove(), ms + 120);
   // it drops into the slot: the frame takes a small knock toward the way out
-  setTimeout(() => boardEl.animate([{ transform: "translate(0,0)" }, { transform: `translate(${vc * 2}px, ${vr * 2}px)` }, { transform: "translate(0,0)" }], { duration: 160, easing: "ease-out" }), ms * 0.7);
+  setTimeout(() => boardEl.animate([{ transform: "translate(0,0)" }, { transform: `translate(${vc * 2}px, ${vr * 2}px)` }, { transform: "translate(0,0)" }], { duration: 160, easing: "ease-out" }), 70 + ms * 0.5);
 
   refreshIce();
 

@@ -146,7 +146,9 @@ function launchRocket() {
       { transform: "translate(" + (x - 22) + "px," + (y - 22) + "px) rotate(" + ang + "deg) scale(1)" },
     ],
     { duration: 520, easing: "cubic-bezier(.5,0,.9,.6)", fill: "forwards" },
-  ).onfinish = () => {
+  );
+  // on a timer, not the animation's finish event, so it lands even if the browser holds back frames
+  setTimeout(() => {
     r.remove();
     Sfx.boom();
     boardEl.animate([{ transform: "none" }, { transform: "translateY(5px)" }, { transform: "none" }], { duration: 240, easing: "ease-out" });
@@ -157,7 +159,7 @@ function launchRocket() {
     resetHistory();
     updateBoosters();
     checkWin();
-  };
+  }, 520);
 }
 
 function loadLevel(idx) {
@@ -525,6 +527,7 @@ function updateBoosters() {
   $("boosterHammer").classList.toggle("active", toolMode === "hammer");
   $("boosterVac").classList.toggle("active", toolMode === "vacuum");
   updateGadgets(can);
+  markPlayable(); // dim blocks that can't move right now (engine.js)
   queueStuckCheck();
 }
 function buyPrompt(id) {

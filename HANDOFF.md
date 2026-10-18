@@ -3,7 +3,7 @@
 Audience: an LLM coding agent (Claude Code) taking over development.
 Repo: `github.com/tiffanivick/color-jam` (branch `main`), deployed by GitHub Pages at
 `https://tiffanivick.github.io/color-jam/`. Owner plays it as an iPhone home-screen web app.
-Current live build: **57** (`?v=57`).
+Current live build: **58** (`?v=58`).
 
 ---
 
@@ -75,8 +75,8 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
 ### 2.1 Grid
 - Per-level `rows × cols` (5×5 up to 8×8 since build 49; `tools/regrid.py` grew chosen levels onto
   7×7 / 8×7 / 8×8 boards). `fitBoard()` scales `#boardScale` down when a board is bigger than the
-  space; dragging divides finger distances by that scale (`drag.k`), aiming uses `boardPoint()`. Constants in `engine.js`: `CELL = 48`, `GAP = 6`,
-  `STEP = 54` (cell pitch), `PADDING = 0`, `BORDER = 14`.
+  space; dragging divides finger distances by that scale (`drag.k`), aiming uses `boardPoint()`. Constants in `engine.js`: `CELL = 46`, `GAP = 8` (build 58; was 48/6),
+  `STEP = 54` (cell pitch, unchanged: the hammer/vacuum sprites are drawn for it), `PADDING = 0`, `BORDER = 14`.
 - Board-local pixel position of cell `(r, c)`: `x = PADDING + c*STEP`, `y = PADDING + r*STEP`.
   The board may be CSS-scaled to fit the phone: convert pointer coordinates with
   `k = rect.width / boardEl.offsetWidth` (see `boardPoint(e)` in `fx.js`).
@@ -90,6 +90,14 @@ Meta: coins, stars, daily login, daily quests, trophies, chests, shop, Bonus Rus
   not against a gate, proven winnable by src/solver.js, and never longer than before when solver3
   can tell. Levels 1-6 and every third level stay plain.
 - `fitBoard()` now lives in `engine.js` (build 57) and adds `.scaled` to the board when it shrinks.
+  Build 58: boards sit at `BOARD_BASE` 0.92 (blocks ~12% smaller than build 57), 6-wide boards at
+  0.92 x 1.04 and 5-wide at 0.92 x 1.1 so small boards fill the screen; big boards whatever fits.
+- Build 58 feel: while dragging, a block moves by `transform: translate3d` (class `.dragging`), and
+  `stopGlide()` writes the real left/top when the drag ends, so no page layout runs per frame.
+  Exits: a 70 ms snap into line, then an accelerating slide through the gate that fades and shrinks
+  (WAAPI). `markPlayable()` (called from `updateBoosters`) dims blocks that can't move or leave right
+  now (`.stuck`, opacity 0.68); power-ups still target them. Blocks cleared by the Rocket, gadgets or
+  the hammer use `.blasted` (a 0.22 s pop and shrink).
 
 ### 2.2 Blocks ("clusters")
 - A block is one rigid polyomino: `{ color, cells: [[r,c],…], id, …flags }`. It moves as a unit.
@@ -330,6 +338,10 @@ How the game uses them (`src/fx.js`):
 - Hover size `HOVER = 1.2`. The finger sits `gy` px (× 1.2) straight below the strike point: on the
   hammer the handle runs ≥100 px to the right of the target, so a finger on the handle could not
   reach the right-hand columns. The vacuum's finger point is on its hose.
+- Build 58: the hammer strikes **once**: hover, cock back (rises 12 px, grows 8%, shadow widens,
+  110-230 ms), plunge (frames 0 -> 6, ease-in, 230-320 ms), impact (flash, shake, sparks, the block
+  gets `.blasted`), then springs up and fades (`done()` at 640 ms). The 3-strike + wedge-break below
+  is the old build 37 sequence, kept here for history.
 - `hammerFX` runs one `fxRun()` timeline (rAF, with a 100 ms interval fallback so it still finishes
   when the browser withholds frames): per strike, frame 0 → 6 and scale 1.2 → 1.0 with ease-in over
   110 ms, squash `(1.07, 0.93)` on contact, swing back over 110 ms; strikes at 300/600/900 ms,

@@ -130,142 +130,67 @@ function hammerFX(b, done) {
   const h = fxSprite("fx-hammer", HAM3D);
   h.style.left = hit.x + "px";
   h.style.top = hit.y + "px";
-  // each strike swings the head down about the handle (raised pose -> face flat on the block)
-  // while it shrinks from hover size to 1, squashes on contact, then swings back up
+  // Build 58, one strike like Color Block Jam: it hovers over the block, cocks back (rises and
+  // grows a little, its shadow widening), plunges down onto the block face (raised -> contact
+  // frames, with a squash), and on impact the block pops and shrinks away while the hammer
+  // springs back up and fades. The approved 3D hammer art and its diagonal pose are unchanged.
   const LAST = HAM3D.frames.length - 1;
-  const HITS = [300, 600, 900];
-  const BREAK = HITS[2] + 90;
-  const END = BREAK + 1080;
-  const easeIn = (p) => p * p;
+  const COCK = 110; // start of the wind-up
+  const PLUNGE = 230; // start of the swing down
+  const HIT = 320; // face on the block
+  const END = 640;
+  const easeIn = (p) => p * p * p;
   const easeOut = (p) => 1 - (1 - p) * (1 - p);
   const clamp01 = (p) => Math.max(0, Math.min(1, p));
-  // u: 0 = raised, 1 = face on the block
   function pose(ms) {
-    let u = 0;
+    let u = 0; // 0 = raised, 1 = face on the block
+    let lift = 0; // px up (cocked back)
+    let grow = 0; // extra scale when cocked back
     let sq = 0; // squash, 1 right at contact
-    let o = aimed ? 1 : clamp01(ms / 140);
-    HITS.forEach((t, i) => {
-      if (ms >= t - 110 && ms < t) u = easeIn((ms - t + 110) / 110);
-      else if (ms >= t && ms < t + 40) (u = 1), (sq = 1 - (ms - t) / 40);
-      else if (i < 2 && ms >= t + 40 && ms < t + 150) u = 1 - easeOut((ms - t - 40) / 110);
-      else if (i === 2 && ms >= t + 40) {
-        // after the last blow: rest on the pieces, lift away and fade
-        u = 1 - easeOut(clamp01((ms - 1060) / 190));
-        o = 1 - clamp01((ms - 1250) / 150);
-      }
-    });
-    const s = HOVER - (HOVER - 1) * u;
+    let o = aimed ? 1 : clamp01(ms / 90);
+    if (ms >= COCK && ms < PLUNGE) {
+      const p = easeOut((ms - COCK) / (PLUNGE - COCK));
+      lift = 12 * p;
+      grow = 0.08 * p;
+    } else if (ms >= PLUNGE && ms < HIT) {
+      const p = easeIn((ms - PLUNGE) / (HIT - PLUNGE));
+      u = p;
+      lift = 12 * (1 - p);
+      grow = 0.08 * (1 - p);
+    } else if (ms >= HIT) {
+      const p = clamp01((ms - HIT - 45) / (END - HIT - 45));
+      sq = 1 - clamp01((ms - HIT) / 45);
+      u = 1 - easeOut(p);
+      lift = 26 * easeOut(p);
+      o = 1 - clamp01((ms - HIT - 90) / (END - HIT - 90));
+    }
+    const s = HOVER - (HOVER - 1) * u + grow;
     h.show(Math.round(u * LAST));
-    h.style.transform = `scale(${s * (1 + 0.07 * sq)}, ${s * (1 - 0.07 * sq)})`;
+    h.style.transform = `translate(0px, ${-lift}px) scale(${s * (1 + 0.07 * sq)}, ${s * (1 - 0.07 * sq)})`;
     h.style.opacity = o;
-    shadow.style.transform = `scale(${1.35 - 0.45 * u})`;
-    shadow.style.opacity = (0.25 + 0.3 * u) * o;
+    shadow.style.transform = `scale(${1.35 - 0.45 * u + grow * 2})`;
+    shadow.style.opacity = (0.25 + 0.3 * u - grow) * o;
   }
   pose(0);
 
-  const crack = document.createElement("div");
-  crack.className = "fx-crack";
-  crack.style.left = hit.x - r.x - 55 + "px";
-  crack.style.top = hit.y - r.y - 55 + "px";
-  crack.style.opacity = "0";
-  el.appendChild(crack);
-  // each blow: squash, a jolt, sparks, and the cracks grow
-  const impact = (n) => {
-    Sfx.smash(n);
-    el.animate(
-      [
-        { transform: "translateZ(0) scale(1, 1)" },
-        { transform: `translateZ(0) scale(${1.04 + n * 0.02}, ${0.9 - n * 0.03})` },
-        { transform: "translateZ(0) scale(0.98, 1.02)" },
-        { transform: "translateZ(0) scale(1, 1)" },
-      ],
-      { duration: 190, easing: "ease-out" },
-    );
-    crack.style.opacity = "1";
-    crack.style.transform = `scale(${[0.5, 0.8, 1.1][n]}) rotate(${n * 25}deg)`;
+  // the blow: a flash and a jolt, sparks, and the block pops and shrinks away
+  const impact = () => {
+    Sfx.smash(2);
     const flash = document.createElement("div");
     flash.className = "fx-flash";
     flash.style.left = hit.x - 40 + "px";
     flash.style.top = hit.y - 40 + "px";
     boardEl.appendChild(flash);
     setTimeout(() => flash.remove(), 420);
-    boardEl.animate(
-      [{ transform: "translate(0,0)" }, { transform: `translate(${-3 - n}px,${2 + n}px)` }, { transform: `translate(${3 + n}px,${-2 - n}px)` }, { transform: "translate(0,0)" }],
-      { duration: 200 },
-    );
-    burst(hit.x, hit.y, n < 2 ? "#ffffff" : "#efe6d2", 6 + n * 5);
-  };
-
-  // the last blow breaks it into wedges along the cracks, which tumble away and fall
-  const breakUp = () => {
-    Sfx.crack();
-    const px = hit.x - r.x;
-    const py = hit.y - r.y;
-    const W = r.w;
-    const H = r.h + 10;
-    const N = 9;
-    const TAU = Math.PI * 2;
-    const norm = (a) => ((a % TAU) + TAU) % TAU;
-    const rim = [];
-    for (let i = 0; i < N; i++) {
-      const a = ((i + (Math.random() - 0.5) * 0.5) / N) * TAU;
-      const dx = Math.cos(a);
-      const dy = Math.sin(a);
-      const t = Math.min(dx > 0 ? (W + 6 - px) / dx : dx < 0 ? (-6 - px) / dx : 1e9, dy > 0 ? (H + 6 - py) / dy : dy < 0 ? (-6 - py) / dy : 1e9);
-      rim.push([px + dx * t, py + dy * t, a]);
-    }
-    for (let i = 0; i < N; i++) {
-      const p1 = rim[i];
-      const p2 = rim[(i + 1) % N];
-      const span = norm(p2[2] - p1[2]);
-      const pts = [[px, py], [p1[0], p1[1]]];
-      [[-6, -6], [W + 6, -6], [W + 6, H + 6], [-6, H + 6]]
-        .map((c) => [c[0], c[1], norm(Math.atan2(c[1] - py, c[0] - px) - p1[2])])
-        .filter((c) => c[2] < span)
-        .sort((a, b) => a[2] - b[2])
-        .forEach((c) => pts.push([c[0], c[1]]));
-      pts.push([p2[0], p2[1]]);
-      const ang = p1[2] + span / 2;
-      const frag = document.createElement("div");
-      frag.className = "fx-frag";
-      frag.style.left = r.x + "px";
-      frag.style.top = r.y + "px";
-      frag.style.width = W + "px";
-      frag.style.height = H + "px";
-      frag.style.clipPath = "polygon(" + pts.map(([x, y]) => x.toFixed(1) + "px " + y.toFixed(1) + "px").join(",") + ")";
-      const copy = el.cloneNode(true);
-      copy.style.left = "0px";
-      copy.style.top = "0px";
-      copy.style.animation = "none";
-      copy.style.transition = "none";
-      copy.style.opacity = "1";
-      frag.appendChild(copy);
-      boardEl.appendChild(frag);
-      const dist = 50 + Math.random() * 45;
-      const dx = Math.cos(ang) * dist;
-      const dy = Math.sin(ang) * dist * 0.7;
-      const spin = (Math.random() - 0.5) * 300;
-      const tilt = (Math.random() - 0.5) * 120;
-      frag.style.transformOrigin = px + Math.cos(ang) * 20 + "px " + (py + Math.sin(ang) * 20) + "px";
-      frag.animate(
-        [
-          { transform: "perspective(600px) translate(0,0) rotate(0) rotateX(0)", opacity: 1, offset: 0 },
-          { transform: `perspective(600px) translate(${Math.cos(ang) * 5}px, ${Math.sin(ang) * 5}px) rotate(${spin * 0.03}deg)`, opacity: 1, offset: 0.12 },
-          { transform: `perspective(600px) translate(${dx * 0.7}px, ${dy * 0.7 - 34}px) rotate(${spin * 0.5}deg) rotateX(${tilt * 0.5}deg) scale(0.92)`, opacity: 1, offset: 0.45 },
-          { transform: `perspective(600px) translate(${dx}px, ${dy + 150}px) rotate(${spin}deg) rotateX(${tilt}deg) scale(0.7)`, opacity: 0, offset: 1 },
-        ],
-        { duration: 900 + Math.random() * 200, easing: "cubic-bezier(.25,.55,.55,1)", fill: "forwards" },
-      );
-      setTimeout(() => frag.remove(), 1150);
-    }
+    boardEl.animate([{ transform: "translate(0,0)" }, { transform: "translate(-4px,3px)" }, { transform: "translate(4px,-3px)" }, { transform: "translate(0,0)" }], { duration: 200 });
+    burst(hit.x, hit.y, "#efe6d2", 14);
+    burst(r.x + r.w / 2, r.y + r.h / 2, b.color, 12);
     el.style.transition = "none";
-    el.style.opacity = "0"; // (not visibility: the pieces borrow this block's clip shapes)
-    burst(hit.x, hit.y, "#efe6d2", 16);
+    el.classList.add("blasted");
   };
 
   fxRun(END, pose, [
-    ...HITS.map((t, n) => [t, () => impact(n)]),
-    [BREAK, breakUp],
+    [HIT, impact],
     [
       END,
       () => {
